@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "sousie-frontend",
-    "slug": "sousie-frontend",
+    "name": "sousie",
+    "slug": "sousie",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

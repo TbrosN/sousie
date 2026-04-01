@@ -1,5 +1,5 @@
 {
-  "name": "sousie-frontend",
+  "name": "sousie",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
