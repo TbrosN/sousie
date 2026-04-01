@@ -1,0 +1,21 @@
+---
+description: Client and server state defaults for Expo Router (TanStack Query, Zustand)
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# State and data (Expo / React Native)
+
+## Defaults when adding features
+
+- **Server / async state** (APIs, caching, loading, errors, mutations): use **TanStack Query** (`@tanstack/react-query`). Avoid hand-rolled global `fetch` + `useEffect` caches unless there is a deliberate, documented reason.
+- **Shared client state** across screens (UI flags, cart-like state, cross-route domain that is not in the URL): use **Zustand** with **selectors** so components subscribe only to the slices they need.
+- **Tree-local or rare global concerns** (theme toggles, small auth/session wiring): **React Context** is fine. Keep providers near the root layout when they wrap most of the app.
+
+## Navigation vs app state
+
+- **Expo Router / React Navigation** owns **which screen is shown** and URL-driven params (`useLocalSearchParams`, etc.). Do not duplicate “current route” in Zustand unless there is a specific need (e.g. analytics) and a clear source of truth.
+
+## New dependencies
+
+- Before introducing **Redux**, **MobX**, **SWR**, or other global state / data libraries, prefer aligning with **TanStack Query + Zustand** unless the task explicitly requires something else.

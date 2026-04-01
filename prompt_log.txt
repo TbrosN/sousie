@@ -1,0 +1,13 @@
+I used Cursor, with a mix of Ask and Agent mode, using the recommended agentic build method.
+
+Explain how the routing works here. For instance, what does the (tabs) folder do? What are layout.tsx files too?@app-example/app/(tabs) @app-example/app/(tabs)/_layout.tsx @app-example/app/_layout.tsx 
+
+ah, so parens are just for organization, but regular names affect the route. Is there a notion of `[tabs]` like in nextjs?
+
+what is a stack? and what is ThemeProvider? Im somewhat familiar with context in react but might need a refresher
+
+what about zustand and other modern frameworks/practices for react? Do they apply here, and what would be good to know?
+
+awesome. Would Cursor with the expo skills installed already be aware of the best practice things to use like tanstack query or zustand, or is it worth adding a .cursor file describing this preference?
+
+Awesome, let's write up a short and clear cursor rule describing this
