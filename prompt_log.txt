@@ -11,3 +11,7 @@ what about zustand and other modern frameworks/practices for react? Do they appl
 awesome. Would Cursor with the expo skills installed already be aware of the best practice things to use like tanstack query or zustand, or is it worth adding a .cursor file describing this preference?
 
 Awesome, let's write up a short and clear cursor rule describing this
+
+explain the hooks used in @app-example/hooks . Why does it make sense to use hooks for these, and what does each one actulaly do?
+
+ah interesting. Is it typical to need to worry about hydration and track it explicitly like this when writing my own components?
