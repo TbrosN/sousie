@@ -94,6 +94,11 @@ We will primarily test on Android, although since we're using Expo, we should ge
 - The app must not close and the phone must not turn off during the cooking phase, for the reasons above
 - Users can exit the recipe cooking phase and go back to the planning phase.
 
+## Style Guidelines
+- Make sure to keep the code modular: each file should have a clear responsibility, and we should organize the repo into appropriate folders, files, and helper functions.
+- Avoid magic numbers and hard-coded strings. Instead, use `constants.py` files so there's a single source of truth that is easy to update.
+- Clean up dead code: if you create a file or function that ends up not being used, you must remove it
+
 ## Future features
 
 - Voice control: ask questions or navigate questions via voice in case your hands are full or dirty while cooking
