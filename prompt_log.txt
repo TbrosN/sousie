@@ -15,3 +15,5 @@ Awesome, let's write up a short and clear cursor rule describing this
 explain the hooks used in @app-example/hooks . Why does it make sense to use hooks for these, and what does each one actulaly do?
 
 ah interesting. Is it typical to need to worry about hydration and track it explicitly like this when writing my own components?
+
+Take a look at this plan for my cooking assistant mobile app. Any considerations missing? Anything ambiguous or unclear?
