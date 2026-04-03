@@ -17,3 +17,495 @@ explain the hooks used in @app-example/hooks . Why does it make sense to use hoo
 ah interesting. Is it typical to need to worry about hydration and track it explicitly like this when writing my own components?
 
 Take a look at this plan for my cooking assistant mobile app. Any considerations missing? Anything ambiguous or unclear?
+
+@SPEC.md You will implement this spec. If ABSOLUTELY necessary, you may ask clarifying questions before starting.
+
+@SPEC.md Take a look at this spec and review the code in this codebase. Identify any bugs or divergence from the spec, and classify each as either a 
+- [FLAG]: Something to be aware of or double check, but not necessarily a bug or real problem
+- [BUG]: A correctness bug that needs to be fixed
+- [STYLE]: An antipattern or other indication of bad style
+- [UX]: A UX consideration that seems to have been overlooked or ignored
+
+Output a concise report ranked in order of priority, with higher priority items closer to the top.
+
+good point about the API keys. It seems that we are missing backend functionality. We need to actually create a backend; what do you recommen here? python fastapi? something else? 
+
+in next.js, you can have a server alongside the FE. Is that possible in expo?
+
+ok let's refactor this then using your plan.
+
+I set CLERK_DOMAIN in my .env.local but im getting this: 
+❯ supabase link --project-ref <my project ref>
+Invalid config: auth.third_party.clerk has invalid domain, it usually is like clerk.example.com or example.clerk.accounts.dev. Check https://clerk.com/setup/supabase on how to find the correct value.
+Try rerunning the command with --debug to troubleshoot
+
+when I try to build my app with `npx expo run:android`, I get this error:
+```
+ Configure project :app
+ ℹ️  Applying gradle plugin 'expo-dev-launcher-gradle-plugin'
+
+[Incubating] Problems report is available at: file:///Users/trey/Projects/sousie/android/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* Where:
+Build file '/Users/trey/Projects/sousie/android/build.gradle' line: 24
+
+* What went wrong:
+A problem occurred evaluating root project 'sousie'.
+> Failed to apply plugin 'com.facebook.react.rootproject'.
+   > A problem occurred configuring project ':app'.
+      > SDK location not found. Define a valid SDK location with an ANDROID_HOME environment variable or by setting the sdk.dir path in your project's local properties file at '/Users/trey/Projects/sousie/android/local.properties'.
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 1m 3s
+28 actionable tasks: 28 executed
+Error: /Users/trey/Projects/sousie/android/gradlew app:assembleDebug -x lint -x test --configure-on-demand --build-cache -PreactNativeDevServerPort=8081 -PreactNativeArchitectures=arm64-v8a,armeabi-v7a exited with non-zero code: 1
+```
+
+getting this now:
+```
+Incubating] Problems report is available at: file:///Users/trey/Projects/sousie/android/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Could not determine the dependencies of task ':app:compileDebugJavaWithJavac'.
+> Could not resolve all dependencies for configuration ':app:debugCompileClasspath'.
+   > Could not find org.asyncstorage.shared_storage:storage-android:1.0.0.
+     Required by:
+         project :app > project :react-native-async-storage_async-storage
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 2m 22s
+28 actionable tasks: 28 up-to-date
+Error: /Users/trey/Projects/sousie/android/gradlew app:assembleDebug -x lint -x test --configure-on-demand --build-cache -PreactNativeDevServerPort=8081 -PreactNativeArchitectures=arm64-v8a,armeabi-v7a exited with non-zero code: 1
+```
+
+getting this error when I run `npx expo run:android`:
+[Incubating] Problems report is available at: file:///Users/trey/Projects/sousie/android/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Could not determine the dependencies of task ':app:compileDebugJavaWithJavac'.
+> Could not resolve all dependencies for configuration ':app:debugCompileClasspath'.
+   > Could not find org.asyncstorage.shared_storage:storage-android:1.0.0.
+     Required by:
+         project :app > project :react-native-async-storage_async-storage
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 11s
+28 actionable tasks: 28 up-to-date
+Error: /Users/trey/Projects/sousie/android/gradlew app:assembleDebug -x lint -x test --configure-on-demand --build-cache -PreactNativeDevServerPort=8081 -PreactNativeArchitectures=arm64-v8a,armeabi-v7a exited with non-zero code: 1
+Error: /Users/trey/Projects/sousie/android/gradlew app:assembleDebug -x lint -x test --configure-on-demand --build-cache -PreactNativeDevServerPort=8081 -PreactNativeArchitectures=arm64-v8a,armeabi-v7a exited with non-zero code: 1
+    at ChildProcess.completionListener (/Users/trey/Projects/sousie/node_modules/@expo/spawn-async/src/spawnAsync.ts:67:13)
+    at Object.onceWrapper (node:events:623:26)
+    at ChildProcess.emit (node:events:508:28)
+    at maybeClose (node:internal/child_process:1100:16)
+    at Process.ChildProcess._handle.onexit (node:internal/child_process:305:5)
+    ...
+    at spawnAsync (/Users/trey/Projects/sousie/node_modules/@expo/spawn-async/src/spawnAsync.ts:28:21)
+    at spawnGradleAsync (/Users/trey/Projects/sousie/node_modules/expo/node_modules/@expo/cli/src/start/platforms/android/gradle.ts:134:28)
+    at assembleAsync (/Users/trey/Projects/sousie/node_modules/expo/node_modules/@expo/cli/src/start/platforms/android/gradle.ts:83:16)
+    at runAndroidAsync (/Users/trey/Projects/sousie/node_modules/expo/node_modules/@expo/cli/src/run/android/runAndroidAsync.ts:62:24)
+
+ok it runs and opens the app on my phone now. But the screen just shows:
+`There was a problem loading the project. This development build encountered the following error. java.lang.NoSuchMethodError: NO irtual method getStaticAsyncFunctions()LJava/util.Map...`
+
+let's add a sign in with google option since we're already using clerk
+
+The google sign in stuff rqeuires expo-auth-session and expo-web-browser, so I installed those. But now npm says:
+```
+@xmldom/xmldom  <0.8.12
+Severity: high
+xmldom: XML injection via unsafe CDATA serialization allows attacker-controlled markup insertion - https://github.com/advisories/GHSA-wh4c-j3r5-mjhp
+fix available via `npm audit fix`
+node_modules/@xmldom/xmldom
+
+lodash  <=4.17.23
+Severity: high
+lodash vulnerable to Code Injection via `_.template` imports key names - https://github.com/advisories/GHSA-r5fr-rjxr-66jc
+lodash vulnerable to Prototype Pollution via array path bypass in `_.unset` and `_.omit` - https://github.com/advisories/GHSA-f23m-r3pf-42rh
+fix available via `npm audit fix`
+node_modules/lodash
+
+2 high severity vulnerabilities
+
+To address all issues, run:
+  npm audit fix
+
+```
+
+I tried npm audit fix but it didnt seem to actually fix these.
+
+We need to be careful here, becuase the 7 day package age rule is important to protect against supply chain attacks. Can I confirm:
+- We are only overriding this rule for the packages that need to be upgraded due to high severity security findings?
+
+is there a way to just install that one package with an exception, rather than running a full `npm install` with more lentient age restrictions?
+
+wait even the latest version of xmldom has a critical vulnerability. Any way we can get around using it entirely?
+
+looks like I need xmldom 0.9.9 to avoid the security vulnerability, but will that work with the clerk dependencies?
+
+this is too loose of an install. If you want to upgrade just one package, use `npm install <package> --min-release-age 0`
+
+@supabase/functions/generate-recipe/index.ts:3-4  For the deno function, where do I put env vars like this?
+
+im getting this error: ` LOG  [2026-04-03T20:54:39.862Z] [ERROR] Fatal: AI recipe generation failed at top level [AppError: Recipe generation failed after 3 retries: Error: Edge function error: Edge Function returned a non-2xx status code]`
+
+what could be the problem then? supabase logs are empty for the funciton (maybe we can add more logging consistent with the style in @SPEC.md ). They show 401.
+
+I think our clerk integration was using the depracated jwt thing, let's fix this. Here's the documentation:
+# Integrate Supabase with Clerk
+
+**Example Repository**
+
+- [Supabase, Next.js, and Clerk Demo](https://github.com/clerk/clerk-supabase-nextjs)
+
+**Before you start**
+
+- [Set up a Clerk application](https://clerk.com/docs/getting-started/quickstart/setup-clerk.md)
+- [Integrate the appropriate Clerk SDK in your local project](https://clerk.com/docs/getting-started/quickstart/overview.md)
+
+Integrating Supabase with Clerk gives you the benefits of using a Supabase database while leveraging Clerk's authentication, prebuilt components, and webhooks. To get the most out of Supabase with Clerk, you must implement custom [Row Level Security](https://supabase.com/docs/guides/auth/row-level-security) (RLS) policies.
+
+RLS works by validating database queries according to the restrictions defined in the RLS policies applied to the table. This guide will show you how to create RLS policies that restrict access to data based on the user's Clerk ID. This way, users can only access data that belongs to them. To set this up, you will:
+
+- Create a `user_id` column that defaults to the Clerk user's ID when new records are created.
+- Create policies to restrict what data can be read and inserted.
+- Use the Clerk Supabase integration helper in your code to authenticate with Supabase and execute queries.
+
+This guide will have you create a new table in your [Supabase project](https://supabase.com/dashboard/projects), but you can apply these concepts to your existing tables as well.
+
+> This integration restricts what data authenticated users can access in the database, but does not synchronize user records between Clerk and Supabase. To send additional data from Clerk to your Supabase database, use [webhooks](https://clerk.com/docs/guides/development/webhooks/overview.md).
+
+1. ## Set up Clerk as a Supabase third-party auth provider
+
+   For your Clerk session token to work with Supabase, you need to set up Clerk as a third-party auth provider in Supabase.
+
+   1. In the Clerk Dashboard, navigate to the [Supabase integration setup](https://dashboard.clerk.com/setup/supabase).
+   2. Choose your configuration options, and then select **Activate Supabase integration**. This will reveal the **Clerk domain** for your Clerk instance.
+   3. Save the **Clerk domain**.
+   4. In the Supabase Dashboard, navigate to [**Authentication > Sign In / Up**](https://supabase.com/dashboard/project/_/auth/third-party).
+   5. Select **Add provider** and select **Clerk** from the list of providers.
+   6. Paste the **Clerk domain** you copied from the Clerk Dashboard.
+2. ## Set up RLS policies using Clerk session token data
+
+   You can access Clerk session token data in Supabase using the built-in `auth.jwt()` function. This is necessary to create custom RLS policies to restrict database access based on the requesting user.
+
+   1. Create a table to enable RLS on. Open [Supabase's SQL editor](https://supabase.com/dashboard/project/_/sql/new) and run the following queries. This example creates a `tasks` table with a `user_id` column that maps to a Clerk user ID.
+      ```sql
+      -- Create a "tasks" table with a user_id column that maps to a Clerk user ID
+      create table tasks(
+        id serial primary key,
+        name text not null,
+        user_id text not null default auth.jwt()->>'sub'
+      );
+
+      -- Enable RLS on the table
+      alter table "tasks" enable row level security;
+      ```
+   2. Create two policies that restrict access to the `tasks` table based on the requesting user's Clerk ID. These policies allow users to create tasks for themselves and view their own tasks.
+      ```sql
+      create policy "User can view their own tasks"
+      on "public"."tasks"
+      for select
+      to authenticated
+      using (
+      ((select auth.jwt()->>'sub') = (user_id)::text)
+      );
+
+      create policy "Users must insert their own tasks"
+      on "public"."tasks"
+      as permissive
+      for insert
+      to authenticated
+      with check (
+      ((select auth.jwt()->>'sub') = (user_id)::text)
+      );
+      ```
+3. ## Install the Supabase client library
+
+   Run the following command to add the Supabase client library to your application.
+
+   ```npm
+   npm install @supabase/supabase-js
+   ```
+4. ## Set up your environment variables
+
+   1. In the Supabase dashboard, navigate to [**Project Settings > Data API**](https://supabase.com/dashboard/project/_/settings/api).
+   2. Add the **Project URL** to your `.env` file as `SUPABASE_URL`.
+   3. In the **Project API keys** section, add the value beside `anon` `public` to your `.env` file as `SUPABASE_KEY`.
+
+   > The `NEXT_PUBLIC_` prefix is required for environment variables that are used in the client-side code, so add this prefix to these variables.
+5. ## Fetch Supabase data in your code
+
+   In your app's `page.tsx`, paste the following code. This example shows the list of tasks for the user and allows the user to add new tasks. The `createClerkSupabaseClient()` function uses [Supabase's `createClient()` method](https://supabase.com/docs/reference/objects/initializing) to initialize a new Supabase client with access to Clerk's session token.
+
+   **Client-side rendering**
+
+   The following example uses the [`Next.js SDK`](https://clerk.com/docs/reference/nextjs/overview.md) to access the [`useUser()`](https://clerk.com/docs/nextjs/reference/hooks/use-user.md) and [`useSession()`](https://clerk.com/docs/nextjs/reference/hooks/use-session.md) hooks, but you can adapt this code to work with any React-based Clerk SDK.
+
+   ```tsx {{ filename: 'app/page.tsx', collapsible: true }}
+   'use client'
+   import { useEffect, useState } from 'react'
+   import { useSession, useUser } from '@clerk/nextjs'
+   import { createClient } from '@supabase/supabase-js'
+
+   export default function Home() {
+     const [tasks, setTasks] = useState<any[]>([])
+     const [loading, setLoading] = useState(true)
+     const [name, setName] = useState('')
+     // The `useUser()` hook is used to ensure that Clerk has loaded data about the signed in user
+     const { user } = useUser()
+     // The `useSession()` hook is used to get the Clerk session object
+     // The session object is used to get the Clerk session token
+     const { session } = useSession()
+
+     // Create a custom Supabase client that injects the Clerk session token into the request headers
+     function createClerkSupabaseClient() {
+       return createClient(
+         process.env.NEXT_PUBLIC_SUPABASE_URL!,
+         process.env.NEXT_PUBLIC_SUPABASE_KEY!,
+         {
+           async accessToken() {
+             return session?.getToken() ?? null
+           },
+         },
+       )
+     }
+
+     // Create a `client` object for accessing Supabase data using the Clerk token
+     const client = createClerkSupabaseClient()
+
+     // This `useEffect` will wait for the User object to be loaded before requesting
+     // the tasks for the signed in user
+     useEffect(() => {
+       if (!user) return
+
+       async function loadTasks() {
+         setLoading(true)
+         const { data, error } = await client.from('tasks').select()
+         if (!error) setTasks(data)
+         setLoading(false)
+       }
+
+       loadTasks()
+     }, [user])
+
+     async function createTask(e: React.FormEvent<HTMLFormElement>) {
+       e.preventDefault()
+       // Insert task into the "tasks" database
+       await client.from('tasks').insert({
+         name,
+       })
+       window.location.reload()
+     }
+
+     return (
+       <div>
+         <h1>Tasks</h1>
+
+         {loading && <p>Loading...</p>}
+
+         {!loading && tasks.length > 0 && tasks.map((task: any) => <p key={task.id}>{task.name}</p>)}
+
+         {!loading && tasks.length === 0 && <p>No tasks found</p>}
+
+         <form onSubmit={createTask}>
+           <input
+             autoFocus
+             type="text"
+             name="name"
+             placeholder="Enter new task"
+             onChange={(e) => setName(e.target.value)}
+             value={name}
+           />
+           <button type="submit">Add</button>
+         </form>
+       </div>
+     )
+   }
+   ```
+
+   **Server-side rendering**
+
+   The following example uses the [`Next.js SDK`](https://clerk.com/docs/reference/nextjs/overview.md) to demonstrate how to integrate Supabase with Clerk in a **server-side rendered** application.
+
+   The `createServerSupabaseClient()` function is stored in a separate file so that it can be re-used in multiple places, such as within `page.tsx` or a Server Action file. This function uses the [`auth().getToken()`](https://clerk.com/docs/reference/nextjs/app-router/auth.md#data-fetching-with-get-token) method to pass the Clerk session token to the Supabase client.
+
+   ```ts {{ filename: 'app/ssr/client.ts' }}
+   import { auth } from '@clerk/nextjs/server'
+   import { createClient } from '@supabase/supabase-js'
+
+   export function createServerSupabaseClient() {
+     return createClient(
+       process.env.NEXT_PUBLIC_SUPABASE_URL!,
+       process.env.NEXT_PUBLIC_SUPABASE_KEY!,
+       {
+         async accessToken() {
+           return (await auth()).getToken()
+         },
+       },
+     )
+   }
+   ```
+
+   The following files render the `/ssr` page and handle the "Add task" form submission. Use the following tabs to view the code for each page.
+
+   **page.tsx**
+
+   ```tsx {{ filename: 'app/ssr/page.tsx' }}
+   import AddTaskForm from './AddTaskForm'
+   import { createServerSupabaseClient } from './client'
+
+   export default async function Home() {
+     // Use the custom Supabase client you created
+     const client = createServerSupabaseClient()
+
+     // Query the 'tasks' table to render the list of tasks
+     const { data, error } = await client.from('tasks').select()
+     if (error) {
+       throw error
+     }
+     const tasks = data
+
+     return (
+       <div>
+         <h1>Tasks</h1>
+
+         <div>{tasks?.map((task: any) => <p key={task.id}>{task.name}</p>)}</div>
+
+         <AddTaskForm />
+       </div>
+     )
+   }
+   ```
+
+   **actions.ts**
+
+   ```ts {{ filename: 'app/ssr/actions.ts' }}
+   'use server'
+
+   import { createServerSupabaseClient } from './client'
+
+   export async function addTask(name: string) {
+     const client = createServerSupabaseClient()
+
+     try {
+       const response = await client.from('tasks').insert({
+         name,
+       })
+
+       console.log('Task successfully added!', response)
+     } catch (error: any) {
+       console.error('Error adding task:', error.message)
+       throw new Error('Failed to add task')
+     }
+   }
+   ```
+
+   **AddTaskForm.tsx**
+
+   ```ts {{ filename: 'app/ssr/AddTaskForm.tsx' }}
+   'use client'
+   import React, { useState } from 'react'
+   import { addTask } from './actions'
+   import { useRouter } from 'next/navigation'
+
+   function AddTaskForm() {
+     const [taskName, setTaskName] = useState('')
+     const router = useRouter()
+
+     async function onSubmit() {
+       await addTask(taskName)
+       setTaskName('')
+       router.refresh()
+     }
+
+     return (
+       <form action={onSubmit}>
+         <input
+           autoFocus
+           type="text"
+           name="name"
+           placeholder="Enter new task"
+           onChange={(e) => setTaskName(e.target.value)}
+           value={taskName}
+         />
+         <button type="submit">Add</button>
+       </form>
+     )
+   }
+   export default AddTaskForm
+   ```
+6. ## Test your integration
+
+   Run your project and sign in. Test creating and viewing tasks. Sign out and sign in as a different user, and repeat.
+
+   If you have the same tasks across multiple accounts, double check that RLS is enabled, or that the RLS policies were properly created. Check the table in the Supabase dashboard. You should see all the tasks between both users, but with differing values in the `user_id` column.
+
+## What does the Clerk Supabase integration do?
+
+Requests to Supabase's APIs require that authenticated users have a `"role": "authenticated"` JWT claim. When enabled, the Clerk Supabase integration adds this claim to your instance's generated session tokens.
+
+## Supabase JWT template deprecation
+
+As of April 1st, 2025, the Clerk Supabase JWT template is considered deprecated. Going forward, the native Supabase integration is the recommended way to integrate Clerk with Supabase. The native integration has a number of benefits over the JWT template:
+
+- No need to fetch a new token for each Supabase request
+- No need to share your Supabase JWT secret key with Clerk
+
+For more information on the benefits of the native integration, see [Supabase's documentation on third-party auth providers](https://supabase.com/docs/guides/auth/third-party/overview).
+
+doest work but i couldnt logout. Let's add a logout button, and also add logging to the supabase function so we can see whats going on there. Remember to follow the style guidelines @SPEC.md:69-74 
+
+still not working, and I see no function logs too
+
+ok now I see logs: [generate-recipe] Non-fatal: caller authentication failed {
+  requestId: "94b14e85-dd7f-482a-bd5a-13d6a1dfdf65",
+  authError: "invalid JWT: unable to parse or verify signature, token signature is invalid: signing method RS256 is invalid"
+}
+
+do we really need to do this verification ourselves? cant the built in supaabse and clerk functions be used here?
+
+ok let's simplify this and fix this then, do any necessary up to date research on supabase + clerk intergration docs
+
+exact same error: [generate-recipe] Non-fatal: caller authentication failed {
+  requestId: "f7187ad6-63ad-459c-9376-24c074b623a6",
+  authError: "invalid JWT: unable to parse or verify signature, token signature is invalid: signing method RS256 is invalid"
+}
