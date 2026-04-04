@@ -3,6 +3,8 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { UI_COPY } from "@/src/constants/app";
 import { THEME } from "@/src/constants/theme";
 
+import { GlassSurface } from "./GlassSurface";
+
 type IngredientActionModalProps = {
   visible: boolean;
   ingredientName: string;
@@ -35,7 +37,7 @@ export function IngredientActionModal({
     >
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={styles.card}>
+        <GlassSurface style={styles.card} contentStyle={styles.cardContent}>
           <Text style={styles.title}>
             {showSuggestions ? UI_COPY.ingredientSwapTitle : UI_COPY.ingredientActionsTitle}
           </Text>
@@ -62,6 +64,13 @@ export function IngredientActionModal({
             <View style={styles.actionsBlock}>
               <Pressable
                 accessibilityRole="button"
+                onPress={onSwap}
+                style={styles.optionButton}
+              >
+                <Text style={styles.optionButtonText}>{UI_COPY.ingredientSwap}</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
                 onPress={onRemove}
                 style={[styles.optionButton, styles.destructiveButton]}
               >
@@ -69,20 +78,13 @@ export function IngredientActionModal({
                   {UI_COPY.ingredientRemove}
                 </Text>
               </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                onPress={onSwap}
-                style={styles.optionButton}
-              >
-                <Text style={styles.optionButtonText}>{UI_COPY.ingredientSwap}</Text>
-              </Pressable>
             </View>
           )}
 
           <Pressable accessibilityRole="button" onPress={onClose} style={styles.cancelButton}>
             <Text style={styles.cancelButtonText}>{UI_COPY.ingredientActionCancel}</Text>
           </Pressable>
-        </View>
+        </GlassSurface>
       </View>
     </Modal>
   );
@@ -100,10 +102,8 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 420,
     maxHeight: "70%",
-    backgroundColor: THEME.color.surface,
-    borderRadius: THEME.radius.lg,
-    borderWidth: 1,
-    borderColor: THEME.color.borderDefault,
+  },
+  cardContent: {
     padding: THEME.space.xxxl,
     gap: THEME.space.lg,
   },
@@ -128,10 +128,10 @@ const styles = StyleSheet.create({
   optionButton: {
     borderWidth: 1,
     borderColor: THEME.color.borderDefault,
-    borderRadius: THEME.radius.md,
+    borderRadius: THEME.radius.lg,
     paddingHorizontal: THEME.space.lg,
     paddingVertical: THEME.space.lg,
-    backgroundColor: THEME.color.surface,
+    backgroundColor: THEME.color.surfaceInteractive,
   },
   optionButtonText: {
     fontSize: THEME.font.sizeMd,
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   },
   destructiveButton: {
     borderColor: THEME.color.destructive,
-    backgroundColor: THEME.color.errorSurface,
+    backgroundColor: THEME.color.destructiveSurface,
   },
   destructiveButtonText: {
     color: THEME.color.destructive,

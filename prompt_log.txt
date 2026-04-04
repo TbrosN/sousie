@@ -687,3 +687,5 @@ much better. Let's add a subtle background behind the textbox + send button area
 
 any error messages to the user should show in the chat area, similar to the chatgpt UI. Error messages should NOT be in the same area as the text input
 
+Let's redesign the UI of this app to follow Apple design practices. Think dark mode and transparency. Also, ingredients should be clearly represented in the UI; it should be clear to the user that you can click on recipes to take actions (replace/delete). We should also display the recipe in a beautiful, easy to read way where ingredients are visibly distinct from instructions. Furthermore, we should add a "presentation mode" where the user can view the recipe steps one-at-a-time like a powerpoint presentation, easily swiping to go forward or back, but the step they're on is full screen and easy to read. Let's make a plan for this.
+

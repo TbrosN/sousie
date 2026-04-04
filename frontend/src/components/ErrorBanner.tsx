@@ -22,12 +22,12 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.color.errorSurface,
     borderColor: THEME.color.errorBorder,
     borderWidth: 1,
-    borderRadius: THEME.radius.md,
+    borderRadius: THEME.radius.lg,
     paddingVertical: THEME.space.md,
     paddingHorizontal: THEME.space.lg,
   },
   text: {
     color: THEME.color.errorText,
-    fontSize: THEME.font.sizeXs,
+    fontSize: THEME.font.sizeSm,
   },
 });

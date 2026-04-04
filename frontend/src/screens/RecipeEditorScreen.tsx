@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { ChatBottomSheet } from "@/src/components/ChatBottomSheet";
 import { IngredientActionModal } from "@/src/components/IngredientActionModal";
+import { PresentationModeModal } from "@/src/components/PresentationModeModal";
 import { RecipeView } from "@/src/components/RecipeView";
 import { UI_COPY } from "@/src/constants/app";
 import { LOG_MESSAGES } from "@/src/constants/logMessages";
@@ -33,6 +34,8 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
   const [isLoadingSubstitutions, setIsLoadingSubstitutions] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [activeRecipe, setActiveRecipe] = useState<Recipe | undefined>(recipe);
+  const [isPresentationModeVisible, setIsPresentationModeVisible] = useState(false);
+  const [presentationStepIndex, setPresentationStepIndex] = useState(0);
 
   useEffect(() => {
     setActiveRecipe(recipe);
@@ -146,6 +149,18 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
     },
     [isOnline, isSending]
   );
+
+  const openPresentationMode = useCallback(() => {
+    if (!activeRecipe || activeRecipe.steps.length === 0) {
+      return;
+    }
+    setPresentationStepIndex(0);
+    setIsPresentationModeVisible(true);
+  }, [activeRecipe]);
+
+  const closePresentationMode = useCallback(() => {
+    setIsPresentationModeVisible(false);
+  }, []);
 
   const handleIngredientRemoval = useCallback(async () => {
     if (!activeRecipe || !selectedIngredientName) {
@@ -299,7 +314,8 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
     <View style={styles.container}>
       <RecipeView
         recipe={activeRecipe}
-        bottomInset={THEME.layout.recipeEditorChatBottomInset}
+        bottomInset={isPresentationModeVisible ? THEME.space.xxxl : THEME.layout.recipeEditorChatBottomInset}
+        onPresentationModePress={openPresentationMode}
         onIngredientPress={handleIngredientPress}
         ingredientsDisabled={isSending}
       />
@@ -317,15 +333,24 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
         }}
         onSelectSubstitution={handleSubstitutionSelect}
       />
-      <ChatBottomSheet
-        isOnline={isOnline}
-        messages={messages}
-        draftMessage={draftMessage}
-        onDraftChange={setDraftMessage}
-        onSubmit={handleSubmit}
-        isSending={isSending}
-        errorMessage={errorMessage}
+      <PresentationModeModal
+        recipe={activeRecipe}
+        visible={isPresentationModeVisible}
+        currentStepIndex={presentationStepIndex}
+        onStepChange={setPresentationStepIndex}
+        onClose={closePresentationMode}
       />
+      {!isPresentationModeVisible ? (
+        <ChatBottomSheet
+          isOnline={isOnline}
+          messages={messages}
+          draftMessage={draftMessage}
+          onDraftChange={setDraftMessage}
+          onSubmit={handleSubmit}
+          isSending={isSending}
+          errorMessage={errorMessage}
+        />
+      ) : null}
     </View>
   );
 }

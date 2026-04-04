@@ -1,9 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 import { ErrorBanner } from "@/src/components/ErrorBanner";
+import { GlassSurface } from "@/src/components/GlassSurface";
 import {
   formatDeleteRecipeAccessibilityLabel,
   formatDeleteRecipeConfirmMessage,
@@ -81,42 +91,69 @@ export function RecipeListScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <TextInput
-        accessibilityLabel={UI_COPY.createRecipePromptPlaceholder}
-        editable={!isLoading && !createBusy}
-        onChangeText={setNewRecipePrompt}
-        placeholder={UI_COPY.createRecipePromptPlaceholder}
-        style={styles.promptInput}
-        value={newRecipePrompt}
-      />
-      <ErrorBanner message={createError} />
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !canCreate }}
-        disabled={!canCreate}
-        onPress={() => {
-          void handleCreateRecipe();
-        }}
-        style={[styles.createButton, !canCreate && styles.createButtonDisabled]}
-      >
-        {createBusy ? (
-          <View style={styles.createButtonBusy}>
-            <ActivityIndicator color={THEME.color.onPrimary} />
-            <Text style={styles.createButtonText}>{UI_COPY.createRecipeCreating}</Text>
-          </View>
-        ) : (
-          <Text style={styles.createButtonText}>{UI_COPY.createRecipe}</Text>
-        )}
-      </Pressable>
-      {!isOnline ? <Text style={styles.offlineNote}>{UI_COPY.offlineHint}</Text> : null}
+    <ScrollView contentContainerStyle={styles.container}>
+      <GlassSurface contentStyle={styles.heroCard}>
+        <Text style={styles.eyebrow}>Sousie Kitchen</Text>
+        <Text style={styles.heroTitle}>Build and refine beautiful recipes.</Text>
+        <Text style={styles.heroSubtitle}>
+          Create a recipe with AI, then open a card to replace ingredients, adjust the method, or cook in presentation mode.
+        </Text>
+
+        <View style={styles.promptWrap}>
+          <TextInput
+            accessibilityLabel={UI_COPY.createRecipePromptPlaceholder}
+            editable={!isLoading && !createBusy}
+            onChangeText={setNewRecipePrompt}
+            placeholder={UI_COPY.createRecipePromptPlaceholder}
+            placeholderTextColor={THEME.color.textMuted}
+            style={styles.promptInput}
+            value={newRecipePrompt}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canCreate }}
+            disabled={!canCreate}
+            onPress={() => {
+              void handleCreateRecipe();
+            }}
+            style={[styles.createButton, !canCreate && styles.createButtonDisabled]}
+          >
+            {createBusy ? (
+              <View style={styles.createButtonBusy}>
+                <ActivityIndicator color={THEME.color.onPrimary} />
+                <Text style={styles.createButtonText}>{UI_COPY.createRecipeCreating}</Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.createButtonText}>{UI_COPY.createRecipe}</Text>
+                <Ionicons name="arrow-forward" size={18} color={THEME.color.onPrimary} />
+              </>
+            )}
+          </Pressable>
+        </View>
+
+        <ErrorBanner message={createError} />
+        {!isOnline ? <Text style={styles.offlineNote}>{UI_COPY.offlineHint}</Text> : null}
+      </GlassSurface>
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Recipes</Text>
+        <Text style={styles.sectionCaption}>{recipes.length} saved</Text>
+      </View>
 
       {recipes.length === 0 ? (
-        <Text style={styles.emptyText}>{UI_COPY.emptyRecipes}</Text>
+        <GlassSurface contentStyle={styles.emptyCard}>
+          <Ionicons name="moon-outline" size={28} color={THEME.color.accent} />
+          <Text style={styles.emptyTitle}>{UI_COPY.emptyRecipes}</Text>
+          <Text style={styles.emptyText}>
+            Start with a dish idea above and Sousie will draft the first version for you.
+          </Text>
+        </GlassSurface>
       ) : (
         recipes.map((recipe) => (
-          <View key={recipe.id} style={styles.recipeCard}>
+          <GlassSurface key={recipe.id} style={styles.recipeCardWrap} contentStyle={styles.recipeCard}>
             <Pressable
+              accessibilityLabel={`${UI_COPY.openRecipeLabel} ${recipe.title}`}
               accessibilityRole="button"
               onPress={() =>
                 router.push({
@@ -124,11 +161,18 @@ export function RecipeListScreen() {
                   params: { recipeId: recipe.id },
                 })
               }
-              style={styles.recipeCardMain}
+              style={({ pressed }) => [styles.recipeCardMain, pressed ? styles.recipeCardPressed : null]}
             >
-              <Text style={styles.recipeTitle}>{recipe.title}</Text>
-              <Text style={styles.recipeSubtitle}>{formatRecipeServingsLine(recipe.numServings)}</Text>
+              <View style={styles.recipeCardText}>
+                <Text style={styles.recipeTitle}>{recipe.title}</Text>
+                <Text style={styles.recipeSubtitle}>{formatRecipeServingsLine(recipe.numServings)}</Text>
+                <Text style={styles.recipeHint}>{UI_COPY.recipeCardHint}</Text>
+              </View>
+              <View style={styles.recipeCardAffordance}>
+                <Ionicons name="chevron-forward-circle" size={30} color={THEME.color.accent} />
+              </View>
             </Pressable>
+
             <Pressable
               accessibilityLabel={formatDeleteRecipeAccessibilityLabel(recipe.title)}
               accessibilityRole="button"
@@ -157,38 +201,64 @@ export function RecipeListScreen() {
                 color={THEME.color.destructive}
               />
             </Pressable>
-          </View>
+          </GlassSurface>
         ))
       )}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     padding: THEME.space.xxxl,
     backgroundColor: THEME.color.backgroundApp,
-    gap: THEME.space.lg,
+    gap: THEME.space.sectionGap,
   },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: THEME.color.backgroundApp,
+  },
+  heroCard: {
+    padding: THEME.space.xxxl,
+    gap: THEME.space.lg,
+  },
+  eyebrow: {
+    color: THEME.color.textMuted,
+    fontSize: THEME.font.sizeXs,
+    letterSpacing: 1.6,
+    textTransform: "uppercase",
+  },
+  heroTitle: {
+    color: THEME.color.textStrong,
+    fontSize: THEME.font.sizeDisplay,
+    lineHeight: THEME.font.lineHeightDisplay,
+    fontWeight: THEME.font.weightBold,
+  },
+  heroSubtitle: {
+    color: THEME.color.textSecondary,
+    fontSize: THEME.font.sizeMd,
+    lineHeight: THEME.font.lineHeightBody,
+  },
+  promptWrap: {
+    gap: THEME.space.md,
   },
   promptInput: {
     borderWidth: 1,
     borderColor: THEME.color.borderMuted,
-    borderRadius: THEME.radius.md,
+    borderRadius: THEME.radius.xl,
     paddingHorizontal: THEME.space.xl,
     paddingVertical: THEME.space.lg,
     fontSize: THEME.font.sizeBody,
-    backgroundColor: THEME.color.surface,
+    backgroundColor: THEME.color.surfaceMuted,
     color: THEME.color.textPrimary,
   },
   createButton: {
-    backgroundColor: THEME.color.primaryButton,
-    borderRadius: THEME.radius.md,
+    flexDirection: "row",
+    gap: THEME.space.sm,
+    backgroundColor: THEME.color.accentStrong,
+    borderRadius: THEME.radius.xl,
     paddingVertical: THEME.space.xl,
     alignItems: "center",
     minHeight: THEME.space.inputMinHeight + THEME.space.xl * 2,
@@ -211,37 +281,89 @@ const styles = StyleSheet.create({
     color: THEME.color.offlineText,
     fontSize: THEME.font.size2xs,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+  },
+  sectionTitle: {
+    color: THEME.color.textPrimary,
+    fontSize: THEME.font.sizeTitle,
+    fontWeight: THEME.font.weightBold,
+  },
+  sectionCaption: {
+    color: THEME.color.textMuted,
+    fontSize: THEME.font.sizeSm,
+  },
+  emptyCard: {
+    alignItems: "center",
+    paddingVertical: THEME.space.xxxl * 2,
+    paddingHorizontal: THEME.space.xxxl,
+    gap: THEME.space.md,
+  },
+  emptyTitle: {
+    color: THEME.color.textPrimary,
+    fontSize: THEME.font.sizeLg,
+    fontWeight: THEME.font.weightBold,
+  },
+  emptyText: {
+    color: THEME.color.textSecondary,
+    fontSize: THEME.font.sizeMd,
+    textAlign: "center",
+    lineHeight: THEME.font.lineHeightBody,
+  },
+  recipeCardWrap: {
+    marginBottom: THEME.space.sm,
+  },
   recipeCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: THEME.color.surface,
-    borderRadius: THEME.radius.lg,
-    paddingVertical: THEME.space.md,
-    paddingLeft: THEME.space.xl,
-    paddingRight: THEME.space.xs,
-    borderWidth: 1,
-    borderColor: THEME.color.borderDefault,
+    gap: THEME.space.md,
+    padding: THEME.space.md,
   },
   recipeCardMain: {
     flex: 1,
-    paddingVertical: THEME.space.xs,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: THEME.radius.lg,
+    paddingVertical: THEME.space.xl,
+    paddingLeft: THEME.space.xl,
     paddingRight: THEME.space.md,
   },
-  deleteButton: {
-    padding: THEME.space.lg,
-    justifyContent: "center",
-    alignItems: "center",
+  recipeCardPressed: {
+    backgroundColor: THEME.color.accentSoft,
+  },
+  recipeCardText: {
+    flex: 1,
+    gap: THEME.space.sm,
+  },
+  recipeCardAffordance: {
+    paddingLeft: THEME.space.md,
   },
   recipeTitle: {
     fontSize: THEME.font.sizeLg,
-    fontWeight: THEME.font.weightSemibold,
+    fontWeight: THEME.font.weightBold,
     color: THEME.color.textPrimary,
   },
   recipeSubtitle: {
-    marginTop: THEME.space.xs,
+    fontSize: THEME.font.sizeMd,
     color: THEME.color.textSecondary,
   },
-  emptyText: {
+  recipeHint: {
+    fontSize: THEME.font.sizeXs,
     color: THEME.color.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  deleteButton: {
+    width: 44,
+    height: 44,
+    borderRadius: THEME.radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: THEME.color.destructiveSurface,
+    borderWidth: 1,
+    borderColor: THEME.color.borderMuted,
   },
 });

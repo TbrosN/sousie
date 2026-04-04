@@ -22,7 +22,7 @@ export const UI_COPY = {
   ingredientSwap: "Swap ingredient",
   ingredientActionCancel: "Cancel",
   ingredientSuggestionsLoading: "Finding good replacements…",
-  ingredientTapHint: "Tap an ingredient to edit it with AI.",
+  ingredientTapHint: "Tap any ingredient to replace or remove it.",
   chatSend: "Send",
   chatSendingEllipsis: "...",
   chatUserLabel: "You",
@@ -34,9 +34,22 @@ export const UI_COPY = {
   deleteRecipeConfirmDelete: "Delete",
   servingsPrefix: "Servings:",
   recipeTotalIngredientsTitle: "Total Ingredients",
+  recipeIngredientsSectionTitle: "Ingredients",
+  recipeStepsSectionTitle: "Method",
   recipeNoIngredientsYet: "No ingredients yet.",
   recipeStepPrefix: "Step",
   recipeIngredientLinePrefix: "- ",
+  openRecipeLabel: "Open recipe",
+  recipeCardHint: "Tap to open recipe",
+  presentationModeTitle: "Presentation Mode",
+  presentationModeSubtitle: "Focus on one step at a time",
+  presentationModeEnter: "Start cooking view",
+  presentationModeClose: "Close presentation mode",
+  presentationModePrevious: "Previous",
+  presentationModeNext: "Next",
+  presentationModeDone: "Done",
+  presentationModeSwipeHint: "Swipe left or right to move between steps.",
+  presentationModeEmpty: "This recipe needs at least one step before presentation mode can begin.",
 } as const;
 
 export function formatDeleteRecipeConfirmMessage(recipeTitle: string): string {
@@ -53,6 +66,13 @@ export function formatRecipeServingsLine(numServings: number): string {
 
 export function formatRecipeStepTitle(stepIndexZeroBased: number): string {
   return `${UI_COPY.recipeStepPrefix} ${stepIndexZeroBased + 1}`;
+}
+
+export function formatPresentationProgress(
+  stepIndexZeroBased: number,
+  totalSteps: number
+): string {
+  return `${UI_COPY.recipeStepPrefix} ${stepIndexZeroBased + 1} of ${totalSteps}`;
 }
 
 const apiBaseUrlFromEnv = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();

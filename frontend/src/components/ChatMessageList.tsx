@@ -41,9 +41,11 @@ const styles = StyleSheet.create({
     gap: THEME.space.lg,
   },
   bubble: {
-    borderRadius: THEME.radius.lg,
+    borderRadius: THEME.radius.xl,
     padding: THEME.space.lg,
     gap: THEME.space.sm,
+    borderWidth: 1,
+    borderColor: THEME.color.borderMuted,
   },
   userBubble: {
     backgroundColor: THEME.color.messageUserBg,
@@ -58,11 +60,11 @@ const styles = StyleSheet.create({
   roleText: {
     fontSize: THEME.font.size2xs,
     fontWeight: THEME.font.weightSemibold,
-    color: THEME.color.textStrong,
+    color: THEME.color.textSecondary,
   },
   messageText: {
     fontSize: THEME.font.sizeSm,
-    color: THEME.color.textPrimary,
+    color: THEME.color.textBody,
     lineHeight: THEME.font.lineHeightMessage,
   },
 });
