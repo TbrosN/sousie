@@ -18,7 +18,7 @@ export function ChatMessageList({ messages }: ChatMessageListProps) {
           ]}
         >
           <Text style={styles.roleText}>
-            {message.role === "user" ? "You" : "Sousie AI"}
+            {message.role === "user" ? "You" : "Sousie"}
           </Text>
           <Text style={styles.messageText}>{message.content}</Text>
         </View>
