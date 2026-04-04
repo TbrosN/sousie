@@ -9,8 +9,10 @@ import {
   Platform,
   Pressable,
   ScaledSize,
+  ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import {
@@ -22,6 +24,7 @@ import {
 import {
   formatChefModeProgress,
   formatRecipeStepTitle,
+  formatTotalIngredientCount,
   UI_COPY,
 } from "@/src/constants/app";
 import { THEME } from "@/src/constants/theme";
@@ -49,8 +52,22 @@ function ChefModeModalBody({
   screenSize,
 }: ChefModeModalProps & { screenSize: ScaledSize }) {
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const stepCardMaxHeight = Math.max(
+    THEME.layout.chefModeStepCardMinHeight,
+    Math.floor(windowHeight * THEME.layout.chefModeStepCardMaxHeightRatio)
+  );
   const listRef = useRef<FlatList<Recipe["steps"][number]>>(null);
   const totalSteps = recipe.steps.length;
+  const [stepIngredientsExpanded, setStepIngredientsExpanded] = useState<Record<number, boolean>>(
+    {}
+  );
+
+  useEffect(() => {
+    if (!visible) {
+      setStepIngredientsExpanded({});
+    }
+  }, [visible]);
 
   useEffect(() => {
     if (!visible) {
@@ -61,6 +78,17 @@ function ChefModeModalBody({
       index: currentStepIndex,
     });
   }, [currentStepIndex, visible]);
+
+  function stepIngredientsAreExpanded(stepIndex: number): boolean {
+    return stepIngredientsExpanded[stepIndex] !== false;
+  }
+
+  function toggleStepIngredients(stepIndex: number): void {
+    setStepIngredientsExpanded((prev) => {
+      const expanded = prev[stepIndex] !== false;
+      return { ...prev, [stepIndex]: !expanded };
+    });
+  }
 
   function handleMomentumScrollEnd(event: NativeSyntheticEvent<NativeScrollEvent>): void {
     const nextIndex = Math.round(event.nativeEvent.contentOffset.x / WINDOW_WIDTH);
@@ -110,29 +138,82 @@ function ChefModeModalBody({
           keyExtractor={(_, index) => `chef-mode-step-${index}`}
           renderItem={({ item, index }) => (
             <View style={styles.page}>
-              <GlassSurface style={styles.pageSurface} contentStyle={styles.pageSurfaceContent}>
-                <Text style={styles.pageEyebrow}>{formatRecipeStepTitle(index)}</Text>
+              <GlassSurface
+                style={[styles.pageSurface, { maxHeight: stepCardMaxHeight }]}
+                contentStyle={styles.pageSurfaceShell}
+              >
+                <ScrollView
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator
+                  style={{ maxHeight: stepCardMaxHeight }}
+                  contentContainerStyle={styles.pageScrollContent}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  <Text style={styles.pageEyebrow}>{formatRecipeStepTitle(index)}</Text>
 
-                <View style={styles.ingredientsSection}>
-                  <Text style={styles.ingredientsLabel}>{UI_COPY.recipeIngredientsSectionTitle}</Text>
-                  {item.ingredients.length === 0 ? (
-                    <Text style={styles.ingredientsEmpty}>{UI_COPY.ingredientsNone}</Text>
-                  ) : (
-                    item.ingredients.map((ingredient, ingredientIndex) => {
-                      const display = computeDisplayIngredient(ingredient, recipe.numServings);
-                      return (
-                        <View key={`${ingredient.name}-${ingredientIndex}`} style={styles.ingredientPill}>
-                          <Text style={styles.ingredientName}>{ingredient.name}</Text>
-                          <Text style={styles.ingredientMeta}>
-                            {formatQuantityWithUnit(display.displayQuantity, display.unit)}
-                          </Text>
-                        </View>
-                      );
-                    })
-                  )}
-                </View>
+                  <View style={styles.ingredientsSection}>
+                    {item.ingredients.length === 0 ? (
+                      <>
+                        <Text style={styles.ingredientsLabel}>{UI_COPY.recipeIngredientsSectionTitle}</Text>
+                        <Text style={styles.ingredientsEmpty}>{UI_COPY.ingredientsNone}</Text>
+                      </>
+                    ) : (
+                      <>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityState={{ expanded: stepIngredientsAreExpanded(index) }}
+                          accessibilityLabel={
+                            stepIngredientsAreExpanded(index)
+                              ? UI_COPY.ingredientsListCollapseA11y
+                              : UI_COPY.ingredientsListExpandA11y
+                          }
+                          hitSlop={THEME.space.hitSlop}
+                          onPress={() => toggleStepIngredients(index)}
+                          style={({ pressed }) => [
+                            styles.ingredientsHeader,
+                            pressed ? styles.ingredientsHeaderPressed : null,
+                          ]}
+                        >
+                          <View style={styles.ingredientsHeaderText}>
+                            <Text style={styles.ingredientsLabel}>
+                              {UI_COPY.recipeIngredientsSectionTitle}
+                            </Text>
+                            {!stepIngredientsAreExpanded(index) ? (
+                              <Text style={styles.ingredientsCollapsedSummary}>
+                                {formatTotalIngredientCount(item.ingredients.length)}
+                              </Text>
+                            ) : null}
+                          </View>
+                          <Ionicons
+                            name={stepIngredientsAreExpanded(index) ? "chevron-up" : "chevron-down"}
+                            size={22}
+                            color={THEME.color.textMuted}
+                          />
+                        </Pressable>
+                        {stepIngredientsAreExpanded(index) ? (
+                          <View style={styles.ingredientPillsWrap}>
+                            {item.ingredients.map((ingredient, ingredientIndex) => {
+                              const display = computeDisplayIngredient(ingredient, recipe.numServings);
+                              return (
+                                <View
+                                  key={`${ingredient.name}-${ingredientIndex}`}
+                                  style={styles.ingredientPill}
+                                >
+                                  <Text style={styles.ingredientName}>{ingredient.name}</Text>
+                                  <Text style={styles.ingredientMeta}>
+                                    {formatQuantityWithUnit(display.displayQuantity, display.unit)}
+                                  </Text>
+                                </View>
+                              );
+                            })}
+                          </View>
+                        ) : null}
+                      </>
+                    )}
+                  </View>
 
-                <Text style={styles.instructions}>{item.instructions}</Text>
+                  <Text style={styles.instructions}>{item.instructions}</Text>
+                </ScrollView>
               </GlassSurface>
             </View>
           )}
@@ -252,11 +333,14 @@ const styles = StyleSheet.create({
     maxWidth: THEME.layout.chefModeCardMaxWidth,
     alignSelf: "center",
   },
-  pageSurfaceContent: {
-    minHeight: "70%",
+  pageSurfaceShell: {
+    padding: 0,
+    minHeight: 0,
+    maxHeight: "100%",
+  },
+  pageScrollContent: {
     paddingHorizontal: THEME.space.xxxl * 2,
     paddingVertical: THEME.space.xxxl * 2,
-    justifyContent: "flex-start",
     gap: THEME.space.sectionGap,
   },
   pageEyebrow: {
@@ -273,6 +357,29 @@ const styles = StyleSheet.create({
     fontWeight: THEME.font.weightBold,
   },
   ingredientsSection: {
+    gap: THEME.space.md,
+  },
+  ingredientsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: THEME.space.md,
+    paddingVertical: THEME.space.xs,
+    marginHorizontal: -THEME.space.xs,
+    paddingHorizontal: THEME.space.xs,
+  },
+  ingredientsHeaderPressed: {
+    opacity: 0.85,
+  },
+  ingredientsHeaderText: {
+    flex: 1,
+    gap: THEME.space.xs,
+  },
+  ingredientsCollapsedSummary: {
+    color: THEME.color.textSecondary,
+    fontSize: THEME.font.sizeSm,
+  },
+  ingredientPillsWrap: {
     gap: THEME.space.md,
   },
   ingredientsLabel: {

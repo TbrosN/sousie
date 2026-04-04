@@ -95,6 +95,10 @@ export const THEME = {
     trashIconSize: 22,
     heroMinHeight: 168,
     chefModeCardMaxWidth: 720,
+    /** Max fraction of window height for the chef-mode step card (rest = chrome + footer + safe area). */
+    chefModeStepCardMaxHeightRatio: 0.7,
+    /** Floor for step card height on very small windows. */
+    chefModeStepCardMinHeight: 260,
   },
   metrics: {
     expandedHeightRatio: 0.72,

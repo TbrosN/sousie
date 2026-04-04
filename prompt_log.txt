@@ -696,3 +696,7 @@ amazing thank you. let's now make a couple more changes to presentation mode: pu
 let's rebrand "presentation mode" to "chef mode"
 
 To open chef mode, let's make a little chef hat icon on the button, and rebranch the color accordingly
+
+tall steps are getting cut off. Let's put a max height on the step card and make it scrollable if exceeded
+
+ingredients should also be collapsible in chef mode.
