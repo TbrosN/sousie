@@ -579,3 +579,78 @@ Definitely need a loading state for UX yes. If the first call fails, the app is 
 ok yeah lets start saving chats in async storage. then, on "create recipe", we just create the recipe entry in async storage and populate the first message + response. We can then easily reference this in the editor screen, simplifying our code and eliminating the special casing.
 
 I created a new recipe and the title of the recipe was autofilled in the editor, but there were NO steps or ingredients. Can we add some logging to the backend, say a debug log of the model output so we can see if it's outputting a recipe thats just not getting displayed right on the FE?
+
+We just added the ability to create an initial starting point for the recipe to our FE. But we need to handle this differently on the BE; let's adjust our system prompt, as the LLM needs to generate a full recipe, with ingredients, portions, and all the steps to provide a strong starting point for the user. After that, the user will ask for revisions, and the agent should implement those. It needs to be aware of this sort of flow.
+
+initial recipe gen is failing for me:
+2026-04-03 21:47:06,732 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSyDczzEyeDHNqKvhU7udzmwY_V3XEJ8wdU0 "HTTP/1.1 200 OK"
+2026-04-03 21:47:06,734 WARNING app.main: Non-fatal chat warning: Failed to apply action {'type': 'replace_recipe', 'schema': {'recipe': {'id': 'recipe-1775267211906-rub2wk', 'title': 'Healthy Carrot Cake Energy Bites', 'num_servings': 12, 'steps': [{'instructions': 'In a food processor, combine 1 cup rolled oats, 1/2 cup walnuts, 1 teaspoon ground cinnamon, and 1/4 teaspoon ground nutmeg. Process until the mixture resembles a coarse flour.', 'ingredients': [{'name': 'rolled oats', 'quantity_per_serving': 0.08333, 'unit': 'cup'}, {'name': 'walnuts', 'quantity_per_serving': 0.04167, 'unit': 'cup'}, {'name': 'ground cinnamon', 'quantity_per_serving': 0.08333, 'unit': 'tsp'}, {'name': 'ground nutmeg', 'quantity_per_serving': 0.02083, 'unit': 'tsp'}]}, {'instructions': 'Add 1 cup pitted Medjool dates, 1/2 cup shredded carrots, 1 teaspoon vanilla extract, and 1 tablespoon maple syrup (optional, for extra sweetness and binding) to the food processor. Process again until the mixture comes together and forms a sticky dough.', 'ingredients': [{'name': 'pitted Medjool dates', 'quantity_per_serving': 0.08333, 'unit': 'cup'}, {'name': 'shredded carrots', 'quantity_per_serving': 0.04167, 'unit': 'cup'}, {'name': 'vanilla extract', 'quantity_per_serving': 0.08333, 'unit': 'tsp'}, {'name': 'maple syrup', 'quantity_per_serving': 0.08333, 'unit': 'tbsp'}]}, {'instructions': 'Roll the dough into 12 equally sized balls, about 1-inch in diameter.', 'ingredients': []}, {'instructions': 'If desired, roll each energy bite in 1/4 cup unsweetened shredded coconut to coat.', 'ingredients': [{'name': 'unsweetened shredded coconut', 'quantity_per_serving': 0.02083, 'unit': 'cup'}]}]}}}
+Traceback (most recent call last):
+  File "/Users/trey/Projects/sousie/backend/app/chat_service.py", line 142, in _apply_action
+    action = ReplaceRecipeAction.model_validate(action_payload)
+  File "/Users/trey/Projects/sousie/backend/.venv/lib/python3.13/site-packages/pydantic/main.py", line 716, in model_validate
+    return cls.__pydantic_validator__.validate_python(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        obj,
+        ^^^^
+    ...<5 lines>...
+        by_name=by_name,
+        ^^^^^^^^^^^^^^^^
+    )
+    ^
+pydantic_core._pydantic_core.ValidationError: 1 validation error for ReplaceRecipeAction
+recipe
+  Field required [type=missing, input_value={'type': 'replace_recipe'...83, 'unit': 'cup'}]}]}}}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/trey/Projects/sousie/backend/app/main.py", line 57, in chat
+    return await chat_service.handle_chat(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+@backend/app/tools.py we should add a tool here for replace recipe. The LLM should be relying on these langchain tools, rather than the allowed_actions stuff.
+
+The revision stage also allows user to ask questions and get a response, without editing the recipe necessarily. So basically, the llm can output text, and can also make tool calls to string_replace or replace_recipe or set the portions, etc. Right now, this seems to fail:
+2026-04-03 21:55:39,272 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSyDczzEyeDHNqKvhU7udzmwY_V3XEJ8wdU0 "HTTP/1.1 200 OK"
+2026-04-03 21:55:39,276 WARNING app.main: Non-fatal chat warning: 1 validation error for GeminiActionEnvelope
+assistant_message
+  Field required [type=missing, input_value={'action': {'type': 'repl...25, 'unit': 'cup'}]}]}}}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+Traceback (most recent call last):
+  File "/Users/trey/Projects/sousie/backend/app/main.py", line 57, in chat
+    return await chat_service.handle_chat(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/trey/Projects/sousie/backend/app/chat_service.py", line 39, in handle_chat
+    action_payload, assistant_message = await self._select_action(
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/trey/Projects/sousie/backend/app/chat_service.py", line 63, in _select_action
+    gemini_output = await self._gemini_client.suggest_action(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/trey/Projects/sousie/backend/app/gemini_client.py", line 50, in suggest_action
+    return GeminiActionEnvelope.model_validate(parsed)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/Users/trey/Projects/sousie/backend/.venv/lib/python3.13/site-packages/pydantic/main.py", line 716, in model_validate
+    return cls.__pydantic_validator__.validate_python(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        obj,
+        ^^^^
+    ...<5 lines>...
+        by_name=by_name,
+        ^^^^^^^^^^^^^^^^
+    )
+    ^
+pydantic_core._pydantic_core.ValidationError: 1 validation error for GeminiActionEnvelope
+assistant_message
+  Field required [type=missing, input_value={'action': {'type': 'repl...25, 'unit': 'cup'}]}]}}}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+INFO:     172.26.52.126:36546 - "POST /api/chat HTTP/1.1" 400 Bad Request 
+
+no, the agent should have more freedom than that: it should behave agentically kind of like cursor. So during a response, it can output text, make (multiple) tool calls and update the recipe, output more text, etc.

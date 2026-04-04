@@ -103,6 +103,11 @@ class StringReplaceAction(BaseModel):
     replacement: str
 
 
+class ReplaceRecipeAction(BaseModel):
+    type: Literal["replace_recipe"]
+    recipe: Recipe
+
+
 Action = (
     SetServingsAction
     | AddIngredientAction
@@ -110,6 +115,7 @@ Action = (
     | SubstituteIngredientAction
     | ReplaceInstructionsAction
     | StringReplaceAction
+    | ReplaceRecipeAction
 )
 
 
@@ -135,5 +141,6 @@ class ChatResponse(BaseModel):
 
 
 class GeminiActionEnvelope(BaseModel):
-    assistant_message: str
-    action: dict[str, Any] | None
+    assistant_message: str = ""
+    action: dict[str, Any] | None = None
+    actions: list[dict[str, Any]] = Field(default_factory=list)

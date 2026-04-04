@@ -14,6 +14,7 @@ from app.models import (
     ChatMessage,
     ChatRequest,
     ChatResponse,
+    ReplaceRecipeAction,
     Recipe,
     RemoveIngredientAction,
     ReplaceInstructionsAction,
@@ -35,28 +36,28 @@ class ChatService:
         recipe = request.recipe
         recent_messages = request.messages[-MAX_CHAT_HISTORY:]
 
-        action_payload, assistant_message = await self._select_action(
+        action_payloads, assistant_message = await self._select_actions(
             recipe=recipe,
             recent_messages=recent_messages,
             user_message=request.user_message,
         )
-        updated_recipe = self._apply_action(recipe=recipe, action_payload=action_payload)
+        updated_recipe = self._apply_actions(recipe=recipe, action_payloads=action_payloads)
 
         return ChatResponse(
             assistant_message=assistant_message,
             recipe=updated_recipe,
-            action=action_payload,
+            action=action_payloads[-1] if action_payloads else None,
         )
 
-    async def _select_action(
+    async def _select_actions(
         self,
         recipe: Recipe,
         recent_messages: list[ChatMessage],
         user_message: str,
-    ) -> tuple[dict[str, Any] | None, str]:
+    ) -> tuple[list[dict[str, Any]], str]:
         deterministic = self._deterministic_action(user_message)
         if deterministic is not None:
-            return deterministic, "Updated the recipe."
+            return [deterministic], "Updated the recipe."
 
         if self._gemini_client.is_enabled:
             gemini_output = await self._gemini_client.suggest_action(
@@ -64,9 +65,12 @@ class ChatService:
                 recent_messages=recent_messages,
                 user_message=user_message,
             )
-            return gemini_output.action, gemini_output.assistant_message
+            selected_actions = list(gemini_output.actions)
+            if gemini_output.action is not None:
+                selected_actions.append(gemini_output.action)
+            return selected_actions, gemini_output.assistant_message
 
-        return None, "I can help once Gemini is configured on the backend."
+        return [], "I can help once Gemini is configured on the backend."
 
     def _deterministic_action(self, user_message: str) -> dict[str, Any] | None:
         lower_message = user_message.lower()
@@ -91,12 +95,19 @@ class ChatService:
             }
         return None
 
-    def _apply_action(self, recipe: Recipe, action_payload: dict[str, Any] | None) -> Recipe:
-        if action_payload is None:
-            return recipe
+    def _apply_actions(self, recipe: Recipe, action_payloads: list[dict[str, Any]]) -> Recipe:
+        updated_recipe = recipe
+        for action_payload in action_payloads:
+            updated_recipe = self._apply_single_action(
+                recipe=updated_recipe,
+                action_payload=action_payload,
+            )
+        return updated_recipe
 
+    def _apply_single_action(self, recipe: Recipe, action_payload: dict[str, Any]) -> Recipe:
+        action_payload = self._normalize_action_payload(action_payload)
         action_type = action_payload.get("type")
-        if action_type == "none":
+        if action_type in {None, "none"}:
             return recipe
         try:
             if action_type == "set_servings":
@@ -137,6 +148,21 @@ class ChatService:
                     action.replacement,
                 )
                 return Recipe.model_validate(json.loads(replaced))
+            if action_type == "replace_recipe":
+                action = ReplaceRecipeAction.model_validate(action_payload)
+                return self._tools["replace_recipe"].func(recipe, action.recipe)
             return recipe
         except (ValidationError, ValueError, IndexError, KeyError) as exc:
             raise ValueError(f"Failed to apply action {action_payload}") from exc
+
+    def _normalize_action_payload(self, action_payload: dict[str, Any]) -> dict[str, Any]:
+        """Normalize common malformed LLM action output into valid payload shape."""
+        schema_payload = action_payload.get("schema")
+        if not isinstance(schema_payload, dict):
+            return action_payload
+
+        # If Gemini returns {"type": "...", "schema": {...}} instead of payload fields,
+        # merge schema keys into the action payload while preserving explicit keys.
+        normalized = {**schema_payload, **action_payload}
+        normalized.pop("schema", None)
+        return normalized
