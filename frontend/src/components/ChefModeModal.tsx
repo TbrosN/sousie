@@ -153,10 +153,7 @@ function ChefModeModalBody({
 
                   <View style={styles.ingredientsSection}>
                     {item.ingredients.length === 0 ? (
-                      <>
-                        <Text style={styles.ingredientsLabel}>{UI_COPY.recipeIngredientsSectionTitle}</Text>
-                        <Text style={styles.ingredientsEmpty}>{UI_COPY.ingredientsNone}</Text>
-                      </>
+                      <Text style={styles.ingredientsLabel}>{UI_COPY.chefModeNoIngredients}</Text>
                     ) : (
                       <>
                         <Pressable
@@ -387,10 +384,6 @@ const styles = StyleSheet.create({
     fontSize: THEME.font.sizeSm,
     textTransform: "uppercase",
     letterSpacing: 1.2,
-  },
-  ingredientsEmpty: {
-    color: THEME.color.textMuted,
-    fontSize: THEME.font.sizeMd,
   },
   ingredientPill: {
     flexDirection: "row",

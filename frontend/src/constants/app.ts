@@ -7,7 +7,6 @@ export const STORAGE_KEYS = {
 } as const;
 
 export const UI_COPY = {
-  ingredientsNone: "None",
   offlineHint: "You're offline. Get back online to activate AI features.",
   aiInputPlaceholder: "Ask AI to modify this recipe...",
   createRecipe: "Create Recipe",
@@ -50,6 +49,7 @@ export const UI_COPY = {
   chefModeClose: "Close chef mode",
   chefModeSwipeHint: "Swipe left or right to move between steps.",
   chefModeEmpty: "This recipe needs at least one step before chef mode can begin.",
+  chefModeNoIngredients: "No ingredients",
 } as const;
 
 export function formatDeleteRecipeConfirmMessage(recipeTitle: string): string {
