@@ -6,11 +6,15 @@ import { ChatMessage } from "@/src/types/chat";
 
 type ChatMessageListProps = {
   messages: ChatMessage[];
+  bottomPadding?: number;
 };
 
-export function ChatMessageList({ messages }: ChatMessageListProps) {
+export function ChatMessageList({ messages, bottomPadding = THEME.space.xl }: ChatMessageListProps) {
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
+    >
       {messages.map((message) => (
         <View
           key={message.id}
@@ -35,7 +39,6 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: THEME.space.lg,
-    paddingBottom: THEME.space.xl,
   },
   bubble: {
     borderRadius: THEME.radius.lg,

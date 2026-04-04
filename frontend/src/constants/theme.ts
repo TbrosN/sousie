@@ -27,6 +27,7 @@ export const THEME = {
     errorBorder: "#fecaca",
     errorText: "#991b1b",
     dimmingOverlay: "rgba(17, 24, 39, 0.35)",
+    composerOverlaySurface: "rgba(226, 232, 240, 0.82)",
   },
   font: {
     size2xs: 12,
@@ -73,5 +74,6 @@ export const THEME = {
     expandedHeightRatio: 0.72,
     collapseSwipeThreshold: 48,
     collapsedInputBottomPadding: 12,
+    expandedComposerBottomGap: 28,
   },
 } as const;

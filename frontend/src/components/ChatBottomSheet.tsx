@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import {
   BackHandler,
   Keyboard,
-  KeyboardAvoidingView,
   PanResponder,
   Platform,
   Pressable,
+  type KeyboardEvent,
   StyleSheet,
   Text,
   TextInput,
@@ -39,6 +39,31 @@ export function ChatBottomSheet({
   errorMessage,
 }: ChatBottomSheetProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const updateKeyboardHeight = (event: KeyboardEvent) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    };
+    const resetKeyboardHeight = () => {
+      setKeyboardHeight(0);
+    };
+
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const frameChangeEvent =
+      Platform.OS === "ios" ? "keyboardWillChangeFrame" : "keyboardDidShow";
+
+    const showSubscription = Keyboard.addListener(showEvent, updateKeyboardHeight);
+    const frameSubscription = Keyboard.addListener(frameChangeEvent, updateKeyboardHeight);
+    const hideSubscription = Keyboard.addListener(hideEvent, resetKeyboardHeight);
+
+    return () => {
+      showSubscription.remove();
+      frameSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -74,15 +99,18 @@ export function ChatBottomSheet({
 
   const sendDisabled =
     !isOnline || isSending || draftMessage.trim().length === 0 || !isExpanded;
+  const composerBottomOffset = keyboardHeight + THEME.metrics.expandedComposerBottomGap;
+  const expandedTranscriptBottomPadding =
+    THEME.space.inputMaxHeight +
+    THEME.space.xxxl +
+    THEME.space.xl +
+    THEME.metrics.expandedComposerBottomGap;
 
   return (
     <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
       {isExpanded ? <Pressable style={styles.dimBackground} onPress={() => setIsExpanded(false)} /> : null}
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.sheetContainer}
-      >
+      <View style={styles.sheetContainer}>
         <View
           style={[
             styles.sheet,
@@ -99,10 +127,24 @@ export function ChatBottomSheet({
             <Text style={styles.offlineHint}>{UI_COPY.offlineHint}</Text>
           ) : null}
 
-          {isExpanded ? <ChatMessageList messages={messages} /> : null}
+          {isExpanded ? (
+            <View style={styles.transcriptContainer}>
+              <ErrorBanner message={errorMessage} />
+              <ChatMessageList
+                messages={messages}
+                bottomPadding={expandedTranscriptBottomPadding}
+              />
+            </View>
+          ) : null}
 
-          <View style={styles.inputContainer}>
-            <ErrorBanner message={errorMessage} />
+          <View
+            style={[
+              styles.inputContainer,
+              isExpanded
+                ? [styles.inputContainerExpanded, { bottom: composerBottomOffset }]
+                : styles.inputContainerCollapsed,
+            ]}
+          >
             <View style={styles.inputRow}>
               <TextInput
                 editable={!isSending}
@@ -126,7 +168,7 @@ export function ChatBottomSheet({
             </View>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </View>
   );
 }
@@ -173,9 +215,25 @@ const styles = StyleSheet.create({
     marginBottom: THEME.space.md,
     fontSize: THEME.font.size2xs,
   },
+  transcriptContainer: {
+    flex: 1,
+    gap: THEME.space.md,
+  },
   inputContainer: {
     gap: THEME.space.md,
+  },
+  inputContainerCollapsed: {
     paddingBottom: THEME.space.lg,
+  },
+  inputContainerExpanded: {
+    position: "absolute",
+    left: THEME.space.xl,
+    right: THEME.space.xl,
+    paddingHorizontal: THEME.space.md,
+    paddingTop: THEME.space.md,
+    paddingBottom: THEME.space.md,
+    borderRadius: THEME.radius.lg,
+    backgroundColor: THEME.color.composerOverlaySurface,
   },
   inputRow: {
     flexDirection: "row",

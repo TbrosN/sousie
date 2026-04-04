@@ -678,3 +678,12 @@ hmm I tried to remove "Egg" from a recipe, and it seemed to send the correct msg
 still not working. For debugging, why dont we have the remove ingredient button just run our deterministic remove ingredient function. Then we can see if it works.
 
 yeah I agree. Let's use similar logic for replacements. What should happen is: FE calls backend route for removal/replacement. We deterministacally make the removal or replacement, then tell the llm this ingredient was swapped/replaced, and it should make any adjustments encessary to the recipe, if needed.
+
+In the chat UI, when the user clicks on the text box, the keyboard pops up and blocks the bottom of the screen. So the user can't see what they're typing. We should design this more like the chatgpt mobile app: the text input is on a layer in front of the rest of the chat box. When clicked, it moves up and stays above the keyboard, and this overlays the chat history behind.
+
+this is better, but the textbox is still getting blocked a bit by the keyboard, its not quite high enough
+
+much better. Let's add a subtle background behind the textbox + send button area, so theres a cleaner separation between the overlay and the chat behind it
+
+any error messages to the user should show in the chat area, similar to the chatgpt UI. Error messages should NOT be in the same area as the text input
+
