@@ -1,4 +1,9 @@
-I used Cursor, with a mix of Ask and Agent mode, using the recommended agentic build method.
+I used Cursor, with a mix of Ask and Agent mode, plus web ChatGPT, and used the recommended agentic build method.
+I realized with my initial spec, I was trying to do too much at once and I ran into tons of issues.
+Thus, I ended up abandoning that implementation and stripping down my spec to just the absolute essential features.
+This, along with some modifications to the expected project structure (e.g. using a full python backend rather than supabase functions)
+underwent an entirely fresh agentic build process.
+This second spec used AI assistance in certain parts such as UI design, as you can gather from the prompt history below.
 
 Explain how the routing works here. For instance, what does the (tabs) folder do? What are layout.tsx files too?@app-example/app/(tabs) @app-example/app/(tabs)/_layout.tsx @app-example/app/_layout.tsx 
 
@@ -509,3 +514,15 @@ exact same error: [generate-recipe] Non-fatal: caller authentication failed {
   requestId: "f7187ad6-63ad-459c-9376-24c074b623a6",
   authError: "invalid JWT: unable to parse or verify signature, token signature is invalid: signing method RS256 is invalid"
 }
+
+I want to make a mobile collaborative AI recipe making app. The idea is a bit like cursor: the user and AI work together to edit a recipe, so it's kind of like a chatbot, but the AI or user can make small edits to the recipe, and we can have a nicer recipe display UI than just text. My question is, with the target platform being android, what kind of UI makes sense here? You could imaging something like cursor where there is your recipe on the left and a chat panel on the right, but that breaks down on mobile due to the narrow screen. I'm thinking perhaps a top/bottom split could make sense, but any other ideas? And thoughts on whether chat should be the top or the bottom?
+
+ok I like this, let's use primary recipe view with chat in a bottom sheet collapsed by default. When collapsed in that default state, all the users see is the chat box, which they can then tap on to open the keyboard and expand the chat. Please write this out in a detailed way that I can copy/paste into my spec
+
+for an app such as this, whats the lowest-lift way to create the llm chatbot? I want it to have access to custom tools, for instance I want to give it a tool for scaling the recipe portions
+
+couple of things: I want to store the recipe such that I can very easily scale all the numbers. Let's think about that in the design of the recipe data. second, I think it makes sense for this to actually be a chatbot, so that it has context of the past user messages and stuff. It can perhaps have a tool to read the recipe, but we can just give it the initial recipe and it will know the contents based on the edits it has made.
+
+ok this looks good, again let's write this up concisely as something I can paste into my spec
+
+some updates: let's use langchain for the tools. And steps need to contain a list of ingredients that are involved in that step. Within a step, we might be using only some of the ingredient needed for the entire recipe, so we should also store a quantity within this ingredient of the step. Rather than a step id, let's simply use the ordering of the steps as the source of truth; it's already stored as a list, and its implicit that the first step in the list is supposed to be done first, etc.
