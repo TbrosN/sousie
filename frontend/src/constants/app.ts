@@ -10,7 +10,14 @@ export const UI_COPY = {
   genericError: "Something went wrong. Please try again.",
   emptyRecipes: "No recipes yet. Create your first one.",
   chatUnavailable: "AI is currently unavailable. Try again shortly.",
+  deleteRecipeConfirmTitle: "Delete recipe?",
+  deleteRecipeConfirmCancel: "Cancel",
+  deleteRecipeConfirmDelete: "Delete",
 } as const;
+
+export function formatDeleteRecipeConfirmMessage(recipeTitle: string): string {
+  return `Are you sure you want to delete "${recipeTitle}"? This cannot be undone.`;
+}
 
 export const UI_NUMBERS = {
   collapsedInputBottomPadding: 12,

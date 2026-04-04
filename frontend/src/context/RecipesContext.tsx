@@ -8,17 +8,17 @@ import {
   useState,
 } from "react";
 
-import { buildSampleRecipe } from "@/src/data/defaultRecipe";
 import { StorageService } from "@/src/services/storageService";
 import { Recipe, RecipeFactory } from "@/src/types/recipe";
 import { buildId } from "@/src/utils/ids";
-import { logError, logWarning } from "@/src/utils/logger";
+import { logError } from "@/src/utils/logger";
 
 type RecipesContextValue = {
   recipes: Recipe[];
   isLoading: boolean;
   createRecipe: () => Promise<Recipe>;
   updateRecipe: (recipe: Recipe) => Promise<void>;
+  deleteRecipe: (id: string) => Promise<void>;
   getRecipeById: (id: string) => Recipe | undefined;
 };
 
@@ -35,22 +35,10 @@ export function RecipesProvider({ children }: PropsWithChildren) {
   async function initialize(): Promise<void> {
     try {
       const stored = await StorageService.readRecipes();
-      if (stored.length === 0) {
-        const starter = buildSampleRecipe(buildId("recipe"));
-        await StorageService.writeRecipes([starter]);
-        setRecipes([starter]);
-      } else {
-        setRecipes(stored);
-      }
+      setRecipes(stored);
     } catch (error) {
       logError("Failed to load recipes from storage.", error);
-      const fallback = RecipeFactory.createBlank(buildId("recipe"));
-      setRecipes([fallback]);
-      try {
-        await StorageService.writeRecipes([fallback]);
-      } catch (nestedError) {
-        logWarning("Could not persist fallback recipe.", nestedError);
-      }
+      setRecipes([]);
     } finally {
       setIsLoading(false);
     }
@@ -81,6 +69,16 @@ export function RecipesProvider({ children }: PropsWithChildren) {
     });
   }, []);
 
+  const deleteRecipe = useCallback(async (id: string): Promise<void> => {
+    setRecipes((previous) => {
+      const nextRecipes = previous.filter((entry) => entry.id !== id);
+      void StorageService.writeRecipes(nextRecipes).catch((error) => {
+        logError("Failed to persist recipe deletion.", error);
+      });
+      return nextRecipes;
+    });
+  }, []);
+
   const getRecipeById = useCallback(
     (id: string): Recipe | undefined => recipes.find((recipe) => recipe.id === id),
     [recipes]
@@ -92,9 +90,10 @@ export function RecipesProvider({ children }: PropsWithChildren) {
       isLoading,
       createRecipe,
       updateRecipe,
+      deleteRecipe,
       getRecipeById,
     }),
-    [createRecipe, getRecipeById, isLoading, recipes, updateRecipe]
+    [createRecipe, deleteRecipe, getRecipeById, isLoading, recipes, updateRecipe]
   );
 
   return <RecipesContext.Provider value={value}>{children}</RecipesContext.Provider>;

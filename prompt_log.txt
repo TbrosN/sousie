@@ -561,3 +561,9 @@ yes go ahead and implement the fixes
 can Expo Go send requesets to my local backend, or do I need a development build to test this? Im on android with a fastapi backend
 
 let's update our frontend to use the env var `EXPO_PUBLIC_API_BASE_URL` when sending requests to our backend
+
+Let's add a feature to delete recipes. There should be a little red trash outline icon on the right of each recipe in the recipe list.
+
+yes, let's remove the default recipe. It should start out empty, that initialize stuff was just for debugging and can be cleaned
+
+let's add an "are you sure" dialog before the delete to prevent accidents

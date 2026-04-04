@@ -1,13 +1,16 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { UI_COPY } from "@/src/constants/app";
+import { formatDeleteRecipeConfirmMessage, UI_COPY } from "@/src/constants/app";
 import { useRecipes } from "@/src/context/RecipesContext";
 import { logError } from "@/src/utils/logger";
 
+const TRASH_ICON_COLOR = "#dc2626";
+
 export function RecipeListScreen() {
   const router = useRouter();
-  const { recipes, isLoading, createRecipe } = useRecipes();
+  const { recipes, isLoading, createRecipe, deleteRecipe } = useRecipes();
 
   async function handleCreateRecipe(): Promise<void> {
     try {
@@ -39,20 +42,45 @@ export function RecipeListScreen() {
         <Text style={styles.emptyText}>{UI_COPY.emptyRecipes}</Text>
       ) : (
         recipes.map((recipe) => (
-          <Pressable
-            key={recipe.id}
-            accessibilityRole="button"
-            onPress={() =>
-              router.push({
-                pathname: "/recipes/[recipeId]",
-                params: { recipeId: recipe.id },
-              })
-            }
-            style={styles.recipeCard}
-          >
-            <Text style={styles.recipeTitle}>{recipe.title}</Text>
-            <Text style={styles.recipeSubtitle}>Servings: {recipe.numServings}</Text>
-          </Pressable>
+          <View key={recipe.id} style={styles.recipeCard}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() =>
+                router.push({
+                  pathname: "/recipes/[recipeId]",
+                  params: { recipeId: recipe.id },
+                })
+              }
+              style={styles.recipeCardMain}
+            >
+              <Text style={styles.recipeTitle}>{recipe.title}</Text>
+              <Text style={styles.recipeSubtitle}>Servings: {recipe.numServings}</Text>
+            </Pressable>
+            <Pressable
+              accessibilityLabel={`Delete ${recipe.title}`}
+              accessibilityRole="button"
+              hitSlop={12}
+              onPress={() => {
+                Alert.alert(
+                  UI_COPY.deleteRecipeConfirmTitle,
+                  formatDeleteRecipeConfirmMessage(recipe.title),
+                  [
+                    { text: UI_COPY.deleteRecipeConfirmCancel, style: "cancel" },
+                    {
+                      text: UI_COPY.deleteRecipeConfirmDelete,
+                      style: "destructive",
+                      onPress: () => {
+                        void deleteRecipe(recipe.id);
+                      },
+                    },
+                  ]
+                );
+              }}
+              style={styles.deleteButton}
+            >
+              <Ionicons name="trash-outline" size={22} color={TRASH_ICON_COLOR} />
+            </Pressable>
+          </View>
         ))
       )}
     </View>
@@ -83,11 +111,25 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   recipeCard: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#ffffff",
     borderRadius: 12,
-    padding: 12,
+    paddingVertical: 8,
+    paddingLeft: 12,
+    paddingRight: 4,
     borderWidth: 1,
     borderColor: "#e5e7eb",
+  },
+  recipeCardMain: {
+    flex: 1,
+    paddingVertical: 4,
+    paddingRight: 8,
+  },
+  deleteButton: {
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
   recipeTitle: {
     fontSize: 17,
