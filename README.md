@@ -16,7 +16,7 @@ cd backend
 uv sync
 ```
 
-2. Configure environment:
+1. Configure environment:
 
 ```bash
 cp .env.example .env
@@ -24,7 +24,7 @@ cp .env.example .env
 
 Set `GEMINI_API_KEY` in `backend/.env`.
 
-3. Run the API:
+1. Run the API:
 
 ```bash
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -58,6 +58,6 @@ npx tsc --noEmit
 
 ```bash
 cd backend
-uv run python -m compileall app
-uv run python -c "from app.main import app; print(app.title)"
+uv run -m app.main
 ```
+
