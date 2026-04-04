@@ -92,8 +92,13 @@ export function RecipeView({
                   </Text>
                 </View>
                 <View style={styles.ingredientMeta}>
-                  <Text style={styles.ingredientAction}>Replace or remove</Text>
-                  <Ionicons name="chevron-forward" size={16} color={THEME.color.textMuted} />
+                  <Ionicons
+                    name="pencil"
+                    size={18}
+                    color={THEME.color.textMuted}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
+                  />
                 </View>
               </Pressable>
             ))}
@@ -269,10 +274,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: THEME.space.xs,
-  },
-  ingredientAction: {
-    fontSize: THEME.font.sizeXs,
-    color: THEME.color.textMuted,
   },
   stepCard: {
     padding: THEME.space.xxxl,
