@@ -16,13 +16,13 @@ export const UI_COPY = {
   genericError: "Something went wrong. Please try again.",
   emptyRecipes: "No recipes yet. Create your first one.",
   chatUnavailable: "AI is currently unavailable. Try again shortly.",
-  ingredientActionsTitle: "Ingredient options",
   ingredientSwapTitle: "Choose a replacement",
   ingredientRemove: "Remove ingredient",
-  ingredientSwap: "Swap ingredient",
   ingredientActionCancel: "Cancel",
   ingredientSuggestionsLoading: "Finding good replacements…",
-  ingredientTapHint: "Tap any ingredient to replace or remove it.",
+  ingredientSuggestionsEmpty: "No replacement suggestions right now. Try again later.",
+  ingredientTapHint: "Use swap or delete on each ingredient.",
+  ingredientDeleteConfirmTitle: "Remove ingredient?",
   chatSend: "Send",
   chatSendingEllipsis: "...",
   chatUserLabel: "You",
@@ -54,6 +54,10 @@ export const UI_COPY = {
 
 export function formatDeleteRecipeConfirmMessage(recipeTitle: string): string {
   return `Are you sure you want to delete "${recipeTitle}"? This cannot be undone.`;
+}
+
+export function formatIngredientDeleteConfirmMessage(ingredientName: string): string {
+  return `Remove "${ingredientName}" from every step in this recipe?`;
 }
 
 export function formatDeleteRecipeAccessibilityLabel(recipeTitle: string): string {

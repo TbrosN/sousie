@@ -5,28 +5,25 @@ import { THEME } from "@/src/constants/theme";
 
 import { GlassSurface } from "./GlassSurface";
 
-type IngredientActionModalProps = {
+type IngredientSwapModalProps = {
   visible: boolean;
   ingredientName: string;
   substitutions: string[];
   isLoadingSubstitutions: boolean;
   onClose: () => void;
-  onRemove: () => void;
-  onSwap: () => void;
   onSelectSubstitution: (substitution: string) => void;
 };
 
-export function IngredientActionModal({
+export function IngredientSwapModal({
   visible,
   ingredientName,
   substitutions,
   isLoadingSubstitutions,
   onClose,
-  onRemove,
-  onSwap,
   onSelectSubstitution,
-}: IngredientActionModalProps) {
-  const showSuggestions = isLoadingSubstitutions || substitutions.length > 0;
+}: IngredientSwapModalProps) {
+  const showEmpty =
+    !isLoadingSubstitutions && substitutions.length === 0;
 
   return (
     <Modal
@@ -38,47 +35,26 @@ export function IngredientActionModal({
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <GlassSurface style={styles.card} contentStyle={styles.cardContent}>
-          <Text style={styles.title}>
-            {showSuggestions ? UI_COPY.ingredientSwapTitle : UI_COPY.ingredientActionsTitle}
-          </Text>
+          <Text style={styles.title}>{UI_COPY.ingredientSwapTitle}</Text>
           <Text style={styles.subtitle}>{ingredientName}</Text>
 
-          {showSuggestions ? (
-            isLoadingSubstitutions ? (
-              <Text style={styles.loadingText}>{UI_COPY.ingredientSuggestionsLoading}</Text>
-            ) : (
-              <ScrollView style={styles.optionsList} contentContainerStyle={styles.optionsContent}>
-                {substitutions.map((substitution) => (
-                  <Pressable
-                    key={substitution}
-                    accessibilityRole="button"
-                    onPress={() => onSelectSubstitution(substitution)}
-                    style={styles.optionButton}
-                  >
-                    <Text style={styles.optionButtonText}>{substitution}</Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            )
+          {isLoadingSubstitutions ? (
+            <Text style={styles.loadingText}>{UI_COPY.ingredientSuggestionsLoading}</Text>
+          ) : showEmpty ? (
+            <Text style={styles.emptyText}>{UI_COPY.ingredientSuggestionsEmpty}</Text>
           ) : (
-            <View style={styles.actionsBlock}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={onSwap}
-                style={styles.optionButton}
-              >
-                <Text style={styles.optionButtonText}>{UI_COPY.ingredientSwap}</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                onPress={onRemove}
-                style={[styles.optionButton, styles.destructiveButton]}
-              >
-                <Text style={[styles.optionButtonText, styles.destructiveButtonText]}>
-                  {UI_COPY.ingredientRemove}
-                </Text>
-              </Pressable>
-            </View>
+            <ScrollView style={styles.optionsList} contentContainerStyle={styles.optionsContent}>
+              {substitutions.map((substitution) => (
+                <Pressable
+                  key={substitution}
+                  accessibilityRole="button"
+                  onPress={() => onSelectSubstitution(substitution)}
+                  style={styles.optionButton}
+                >
+                  <Text style={styles.optionButtonText}>{substitution}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
           )}
 
           <Pressable accessibilityRole="button" onPress={onClose} style={styles.cancelButton}>
@@ -116,9 +92,6 @@ const styles = StyleSheet.create({
     fontSize: THEME.font.sizeMd,
     color: THEME.color.textSecondary,
   },
-  actionsBlock: {
-    gap: THEME.space.md,
-  },
   optionsList: {
     maxHeight: 260,
   },
@@ -137,16 +110,13 @@ const styles = StyleSheet.create({
     fontSize: THEME.font.sizeMd,
     color: THEME.color.textPrimary,
   },
-  destructiveButton: {
-    borderColor: THEME.color.destructive,
-    backgroundColor: THEME.color.destructiveSurface,
-  },
-  destructiveButtonText: {
-    color: THEME.color.destructive,
-  },
   loadingText: {
     fontSize: THEME.font.sizeSm,
     color: THEME.color.textSecondary,
+  },
+  emptyText: {
+    fontSize: THEME.font.sizeSm,
+    color: THEME.color.textMuted,
   },
   cancelButton: {
     alignSelf: "flex-end",

@@ -16,7 +16,8 @@ type RecipeViewProps = {
   recipe: Recipe;
   bottomInset: number;
   onPresentationModePress?: () => void;
-  onIngredientPress?: (ingredientName: string) => void;
+  onIngredientSwapPress?: (ingredientName: string) => void;
+  onIngredientRemovePress?: (ingredientName: string) => void;
   ingredientsDisabled?: boolean;
 };
 
@@ -24,7 +25,8 @@ export function RecipeView({
   recipe,
   bottomInset,
   onPresentationModePress,
-  onIngredientPress,
+  onIngredientSwapPress,
+  onIngredientRemovePress,
   ingredientsDisabled = false,
 }: RecipeViewProps) {
   const totals = computeIngredientTotals(recipe);
@@ -72,36 +74,68 @@ export function RecipeView({
           <Text style={styles.muted}>{UI_COPY.recipeNoIngredientsYet}</Text>
         ) : (
           <View style={styles.ingredientsGrid}>
-            {totals.map((ingredient) => (
-              <Pressable
-                key={`${ingredient.name}-${ingredient.unit}`}
-                accessibilityRole="button"
-                accessibilityLabel={`Replace or remove ${ingredient.name}`}
-                disabled={!onIngredientPress || ingredientsDisabled}
-                onPress={() => onIngredientPress?.(ingredient.name)}
-                style={({ pressed }) => [
-                  styles.ingredientRow,
-                  pressed && !ingredientsDisabled ? styles.ingredientRowPressed : null,
-                  ingredientsDisabled ? styles.ingredientRowDisabled : null,
-                ]}
-              >
-                <View style={styles.ingredientCopy}>
-                  <Text style={styles.ingredientName}>{ingredient.name}</Text>
-                  <Text style={styles.ingredientValue}>
-                    {formatQuantityWithUnit(ingredient.totalQuantity, ingredient.unit)}
-                  </Text>
+            {totals.map((ingredient) => {
+              const swapDisabled =
+                !onIngredientSwapPress || ingredientsDisabled;
+              const removeDisabled =
+                !onIngredientRemovePress || ingredientsDisabled;
+              return (
+                <View
+                  key={`${ingredient.name}-${ingredient.unit}`}
+                  style={[
+                    styles.ingredientRow,
+                    ingredientsDisabled ? styles.ingredientRowDisabled : null,
+                  ]}
+                >
+                  <View style={styles.ingredientCopy}>
+                    <Text style={styles.ingredientName}>{ingredient.name}</Text>
+                    <Text style={styles.ingredientValue}>
+                      {formatQuantityWithUnit(ingredient.totalQuantity, ingredient.unit)}
+                    </Text>
+                  </View>
+                  <View style={styles.ingredientActions}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Swap ${ingredient.name}`}
+                      disabled={swapDisabled}
+                      hitSlop={THEME.space.hitSlop}
+                      onPress={() => onIngredientSwapPress?.(ingredient.name)}
+                      style={({ pressed }) => [
+                        styles.ingredientIconButton,
+                        pressed && !swapDisabled ? styles.ingredientIconButtonPressed : null,
+                      ]}
+                    >
+                      <Ionicons
+                        name="swap-horizontal-outline"
+                        size={20}
+                        color={
+                          swapDisabled ? THEME.color.controlDisabled : THEME.color.textMuted
+                        }
+                      />
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove ${ingredient.name}`}
+                      disabled={removeDisabled}
+                      hitSlop={THEME.space.hitSlop}
+                      onPress={() => onIngredientRemovePress?.(ingredient.name)}
+                      style={({ pressed }) => [
+                        styles.ingredientIconButton,
+                        pressed && !removeDisabled ? styles.ingredientIconButtonPressed : null,
+                      ]}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={20}
+                        color={
+                          removeDisabled ? THEME.color.controlDisabled : THEME.color.destructive
+                        }
+                      />
+                    </Pressable>
+                  </View>
                 </View>
-                <View style={styles.ingredientMeta}>
-                  <Ionicons
-                    name="pencil"
-                    size={18}
-                    color={THEME.color.textMuted}
-                    accessibilityElementsHidden
-                    importantForAccessibility="no"
-                  />
-                </View>
-              </Pressable>
-            ))}
+              );
+            })}
           </View>
         )}
       </GlassSurface>
@@ -246,13 +280,10 @@ const styles = StyleSheet.create({
     gap: THEME.space.lg,
     borderRadius: THEME.radius.lg,
     paddingHorizontal: THEME.space.lg,
-    paddingVertical: THEME.space.lg,
+    paddingVertical: THEME.space.sm,
     backgroundColor: THEME.color.surfaceInteractive,
     borderWidth: 1,
     borderColor: THEME.color.borderDefault,
-  },
-  ingredientRowPressed: {
-    backgroundColor: THEME.color.accentSoft,
   },
   ingredientRowDisabled: {
     opacity: 0.55,
@@ -270,10 +301,17 @@ const styles = StyleSheet.create({
     fontSize: THEME.font.sizeSm,
     color: THEME.color.textSecondary,
   },
-  ingredientMeta: {
+  ingredientActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: THEME.space.xs,
+    gap: THEME.space.sm,
+  },
+  ingredientIconButton: {
+    padding: THEME.space.sm,
+    borderRadius: THEME.radius.md,
+  },
+  ingredientIconButtonPressed: {
+    backgroundColor: THEME.color.accentSoft,
   },
   stepCard: {
     padding: THEME.space.xxxl,
