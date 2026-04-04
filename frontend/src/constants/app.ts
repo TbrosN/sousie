@@ -7,6 +7,7 @@ export const STORAGE_KEYS = {
 } as const;
 
 export const UI_COPY = {
+  ingredientsNone: "None",
   offlineHint: "You're offline. Get back online to activate AI features.",
   aiInputPlaceholder: "Ask AI to modify this recipe...",
   createRecipe: "Create Recipe",

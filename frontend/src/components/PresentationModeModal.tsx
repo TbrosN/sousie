@@ -107,7 +107,7 @@ export function PresentationModeModal({
                 <View style={styles.ingredientsSection}>
                   <Text style={styles.ingredientsLabel}>{UI_COPY.recipeIngredientsSectionTitle}</Text>
                   {item.ingredients.length === 0 ? (
-                    <Text style={styles.ingredientsEmpty}>{UI_COPY.recipeNoIngredientsYet}</Text>
+                    <Text style={styles.ingredientsEmpty}>{UI_COPY.ingredientsNone}</Text>
                   ) : (
                     item.ingredients.map((ingredient, ingredientIndex) => {
                       const display = computeDisplayIngredient(ingredient, recipe.numServings);
