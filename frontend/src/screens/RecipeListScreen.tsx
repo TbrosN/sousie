@@ -1,17 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
+import { ConfirmDialog } from "@/src/components/ConfirmDialog";
 import { ErrorBanner } from "@/src/components/ErrorBanner";
 import { GlassSurface } from "@/src/components/GlassSurface";
 import {
@@ -37,9 +29,14 @@ export function RecipeListScreen() {
   const [newRecipePrompt, setNewRecipePrompt] = useState("");
   const [createBusy, setCreateBusy] = useState(false);
   const [createError, setCreateError] = useState("");
+  const [pendingDeleteRecipeId, setPendingDeleteRecipeId] = useState<string | null>(null);
 
   const trimmedPrompt = newRecipePrompt.trim();
   const canCreate = trimmedPrompt.length > 0 && isOnline && !createBusy;
+  const pendingDeleteRecipe =
+    pendingDeleteRecipeId === null
+      ? undefined
+      : recipes.find((r) => r.id === pendingDeleteRecipeId);
 
   async function handleCreateRecipe(): Promise<void> {
     if (!trimmedPrompt || !isOnline || createBusy) {
@@ -178,20 +175,7 @@ export function RecipeListScreen() {
               accessibilityRole="button"
               hitSlop={THEME.space.hitSlop}
               onPress={() => {
-                Alert.alert(
-                  UI_COPY.deleteRecipeConfirmTitle,
-                  formatDeleteRecipeConfirmMessage(recipe.title),
-                  [
-                    { text: UI_COPY.deleteRecipeConfirmCancel, style: "cancel" },
-                    {
-                      text: UI_COPY.deleteRecipeConfirmDelete,
-                      style: "destructive",
-                      onPress: () => {
-                        void deleteRecipe(recipe.id);
-                      },
-                    },
-                  ]
-                );
+                setPendingDeleteRecipeId(recipe.id);
               }}
               style={styles.deleteButton}
             >
@@ -204,6 +188,26 @@ export function RecipeListScreen() {
           </GlassSurface>
         ))
       )}
+      <ConfirmDialog
+        visible={pendingDeleteRecipe != null}
+        title={UI_COPY.deleteRecipeConfirmTitle}
+        message={
+          pendingDeleteRecipe
+            ? formatDeleteRecipeConfirmMessage(pendingDeleteRecipe.title)
+            : ""
+        }
+        cancelLabel={UI_COPY.deleteRecipeConfirmCancel}
+        confirmLabel={UI_COPY.deleteRecipeConfirmDelete}
+        onCancel={() => {
+          setPendingDeleteRecipeId(null);
+        }}
+        onConfirm={() => {
+          if (pendingDeleteRecipeId) {
+            void deleteRecipe(pendingDeleteRecipeId);
+          }
+          setPendingDeleteRecipeId(null);
+        }}
+      />
     </ScrollView>
   );
 }

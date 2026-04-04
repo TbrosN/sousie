@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { ChatBottomSheet } from "@/src/components/ChatBottomSheet";
+import { ConfirmDialog } from "@/src/components/ConfirmDialog";
 import { IngredientSwapModal } from "@/src/components/IngredientSwapModal";
 import { PresentationModeModal } from "@/src/components/PresentationModeModal";
 import { RecipeView } from "@/src/components/RecipeView";
@@ -36,6 +37,7 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
   const [activeRecipe, setActiveRecipe] = useState<Recipe | undefined>(recipe);
   const [isPresentationModeVisible, setIsPresentationModeVisible] = useState(false);
   const [presentationStepIndex, setPresentationStepIndex] = useState(0);
+  const [ingredientDeleteConfirmName, setIngredientDeleteConfirmName] = useState<string | null>(null);
 
   useEffect(() => {
     setActiveRecipe(recipe);
@@ -235,23 +237,23 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
         return;
       }
       setErrorMessage("");
-      Alert.alert(
-        UI_COPY.ingredientDeleteConfirmTitle,
-        formatIngredientDeleteConfirmMessage(ingredientName),
-        [
-          { text: UI_COPY.deleteRecipeConfirmCancel, style: "cancel" },
-          {
-            text: UI_COPY.ingredientRemove,
-            style: "destructive",
-            onPress: () => {
-              void handleIngredientRemoval(ingredientName);
-            },
-          },
-        ]
-      );
+      setIngredientDeleteConfirmName(ingredientName);
     },
-    [handleIngredientRemoval, isOnline, isSending]
+    [isOnline, isSending]
   );
+
+  const closeIngredientDeleteDialog = useCallback(() => {
+    setIngredientDeleteConfirmName(null);
+  }, []);
+
+  const confirmIngredientDelete = useCallback(() => {
+    if (!ingredientDeleteConfirmName) {
+      return;
+    }
+    const name = ingredientDeleteConfirmName;
+    setIngredientDeleteConfirmName(null);
+    void handleIngredientRemoval(name);
+  }, [handleIngredientRemoval, ingredientDeleteConfirmName]);
 
   const handleSubstitutionSelect = useCallback(
     async (substitution: string) => {
@@ -346,6 +348,19 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
         isLoadingSubstitutions={isLoadingSubstitutions}
         onClose={closeSwapModal}
         onSelectSubstitution={handleSubstitutionSelect}
+      />
+      <ConfirmDialog
+        visible={ingredientDeleteConfirmName != null}
+        title={UI_COPY.ingredientDeleteConfirmTitle}
+        message={
+          ingredientDeleteConfirmName
+            ? formatIngredientDeleteConfirmMessage(ingredientDeleteConfirmName)
+            : ""
+        }
+        cancelLabel={UI_COPY.deleteRecipeConfirmCancel}
+        confirmLabel={UI_COPY.ingredientRemove}
+        onCancel={closeIngredientDeleteDialog}
+        onConfirm={confirmIngredientDelete}
       />
       <PresentationModeModal
         recipe={activeRecipe}
