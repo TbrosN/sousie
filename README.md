@@ -2,6 +2,11 @@
 
 Sousie is a mobile MVP for recipe editing with an AI assistant.
 
+## TODO
+- Make LLM order the steps optimially for parallel cooking
+    - consider multiple cooks and cleaning of dishes
+- Make a "present mode" for the steps so its easier to follow when cooking
+
 ## Project Layout
 
 - `frontend`: Expo app (Android, iOS, Web)
@@ -60,4 +65,3 @@ npx tsc --noEmit
 cd backend
 uv run -m app.main
 ```
-
