@@ -18,10 +18,18 @@ export const UI_NUMBERS = {
   collapseSwipeThreshold: 48,
 } as const;
 
+const apiBaseUrlFromEnv = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+let apiBaseUrl: string;
+
+if (apiBaseUrlFromEnv && apiBaseUrlFromEnv.length > 0) {
+  apiBaseUrl = apiBaseUrlFromEnv.replace(/\/+$/, "");
+} else if (Platform.OS === "android") {
+  apiBaseUrl = "http://10.0.2.2:8000";
+} else {
+  apiBaseUrl = "http://127.0.0.1:8000";
+}
+
 export const BACKEND_CONFIG = {
-  baseUrl:
-    Platform.OS === "android"
-      ? "http://10.0.2.2:8000"
-      : "http://127.0.0.1:8000",
+  baseUrl: apiBaseUrl,
   chatPath: "/api/chat",
 } as const;

@@ -557,3 +557,7 @@ Export the review as REVIEW.md at the root of the project.
 3,4,5. We should def fix these yes
 
 yes go ahead and implement the fixes
+
+can Expo Go send requesets to my local backend, or do I need a development build to test this? Im on android with a fastapi backend
+
+let's update our frontend to use the env var `EXPO_PUBLIC_API_BASE_URL` when sending requests to our backend
