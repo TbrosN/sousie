@@ -16,6 +16,13 @@ export const UI_COPY = {
   genericError: "Something went wrong. Please try again.",
   emptyRecipes: "No recipes yet. Create your first one.",
   chatUnavailable: "AI is currently unavailable. Try again shortly.",
+  ingredientActionsTitle: "Ingredient options",
+  ingredientSwapTitle: "Choose a replacement",
+  ingredientRemove: "Remove ingredient",
+  ingredientSwap: "Swap ingredient",
+  ingredientActionCancel: "Cancel",
+  ingredientSuggestionsLoading: "Finding good replacements…",
+  ingredientTapHint: "Tap an ingredient to edit it with AI.",
   chatSend: "Send",
   chatSendingEllipsis: "...",
   chatUserLabel: "You",
@@ -62,4 +69,7 @@ if (apiBaseUrlFromEnv && apiBaseUrlFromEnv.length > 0) {
 export const BACKEND_CONFIG = {
   baseUrl: apiBaseUrl,
   chatPath: "/api/chat",
+  ingredientRemovePath: "/api/ingredient-remove",
+  ingredientSubstitutionsPath: "/api/ingredient-substitutions",
+  ingredientSubstitutePath: "/api/ingredient-substitute",
 } as const;

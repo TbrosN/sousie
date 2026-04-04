@@ -5,7 +5,14 @@ from typing import Any
 
 from app.constants import MAX_CHAT_HISTORY
 from app.gemini_client import GeminiClient
-from app.models import ChatMessage, ChatRequest, ChatResponse, Recipe
+from app.models import (
+    ChatMessage,
+    ChatRequest,
+    ChatResponse,
+    IngredientEditResponse,
+    IngredientSubstitutionsResponse,
+    Recipe,
+)
 from app.tools import build_tools, execute_agent_actions
 
 logger = logging.getLogger(__name__)
@@ -38,6 +45,71 @@ class ChatService:
             action=action_payloads[-1] if action_payloads else None,
         )
 
+    async def suggest_ingredient_substitutions(
+        self,
+        recipe: Recipe,
+        ingredient_name: str,
+    ) -> IngredientSubstitutionsResponse:
+        substitutions = await self._gemini_client.suggest_ingredient_substitutions(
+            recipe=recipe,
+            ingredient_name=ingredient_name,
+        )
+        return IngredientSubstitutionsResponse(substitutions=substitutions)
+
+    async def handle_ingredient_removal(
+        self,
+        recipe: Recipe,
+        ingredient_name: str,
+    ) -> IngredientEditResponse:
+        deterministically_updated_recipe = execute_agent_actions(
+            recipe=recipe,
+            action_payloads=[{"type": "remove_ingredient", "name": ingredient_name}],
+            tools=self._tools,
+        )
+        return await self._apply_post_ingredient_edit_cleanup(
+            recipe=deterministically_updated_recipe,
+            cleanup_prompt=(
+                f"The ingredient {ingredient_name} has already been removed deterministically from all "
+                "structured ingredient lists in the recipe. Starting from the current recipe only, make any "
+                "follow-up instruction, quantity, or technique adjustments needed to keep the recipe coherent. "
+                f"Do not re-add or reintroduce {ingredient_name}."
+            ),
+            fallback_message=(
+                f"Removed {ingredient_name} from the ingredient lists and updated the recipe where needed."
+            ),
+        )
+
+    async def handle_ingredient_substitution(
+        self,
+        recipe: Recipe,
+        old_ingredient_name: str,
+        new_ingredient_name: str,
+    ) -> IngredientEditResponse:
+        deterministically_updated_recipe = execute_agent_actions(
+            recipe=recipe,
+            action_payloads=[
+                {
+                    "type": "substitute_ingredient",
+                    "old_name": old_ingredient_name,
+                    "new_name": new_ingredient_name,
+                }
+            ],
+            tools=self._tools,
+        )
+        return await self._apply_post_ingredient_edit_cleanup(
+            recipe=deterministically_updated_recipe,
+            cleanup_prompt=(
+                f"The ingredient {old_ingredient_name} has already been deterministically replaced with "
+                f"{new_ingredient_name} in all structured ingredient lists in the recipe. Starting from the "
+                "current recipe only, make any follow-up instruction, quantity, or technique adjustments needed "
+                "to keep the recipe coherent. Do not reintroduce the old ingredient unless the recipe truly "
+                "needs both ingredients."
+            ),
+            fallback_message=(
+                f"Swapped {old_ingredient_name} for {new_ingredient_name} and updated the recipe where needed."
+            ),
+        )
+
     async def _select_actions(
         self,
         recipe: Recipe,
@@ -56,6 +128,30 @@ class ChatService:
             return selected_actions, gemini_output.assistant_message
 
         return [], "I can help once Gemini is configured on the backend."
+
+    async def _apply_post_ingredient_edit_cleanup(
+        self,
+        recipe: Recipe,
+        cleanup_prompt: str,
+        fallback_message: str,
+    ) -> IngredientEditResponse:
+        action_payloads, assistant_message = await self._select_actions(
+            recipe=recipe,
+            recent_messages=[],
+            user_message=cleanup_prompt,
+        )
+        updated_recipe = execute_agent_actions(
+            recipe=recipe,
+            action_payloads=action_payloads,
+            tools=self._tools,
+        )
+        cleaned_message = self._ensure_concise_summary(assistant_message, action_payloads).strip()
+        if not cleaned_message or cleaned_message.lower() == "happy to help. what would you like to change?":
+            cleaned_message = fallback_message
+        return IngredientEditResponse(
+            assistant_message=cleaned_message,
+            recipe=updated_recipe,
+        )
 
     def _ensure_concise_summary(
         self,
@@ -100,4 +196,3 @@ class ChatService:
             return "I updated the recipe based on your request."
 
         return "I " + "; ".join(summary_parts) + "."
-

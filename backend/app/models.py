@@ -11,13 +11,18 @@ class Ingredient(BaseModel):
     quantity_per_serving: float = Field(ge=0)
     unit: str
 
-    @field_validator("name", "unit")
+    @field_validator("name")
     @classmethod
-    def non_empty_text(cls, value: str) -> str:
+    def non_empty_name(cls, value: str) -> str:
         cleaned = value.strip()
         if not cleaned:
             raise ValueError("Text fields must not be empty")
         return cleaned
+
+    @field_validator("unit")
+    @classmethod
+    def normalize_unit(cls, value: str) -> str:
+        return value.strip()
 
 
 class RecipeStep(BaseModel):
@@ -138,6 +143,55 @@ class ChatResponse(BaseModel):
     assistant_message: str
     recipe: Recipe
     action: dict[str, Any] | None = None
+
+
+class IngredientSubstitutionsRequest(BaseModel):
+    recipe: Recipe
+    ingredient_name: str
+
+    @field_validator("ingredient_name")
+    @classmethod
+    def ingredient_name_not_empty(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Ingredient name must not be empty")
+        return cleaned
+
+
+class IngredientSubstitutionsResponse(BaseModel):
+    substitutions: list[str]
+
+
+class IngredientRemovalRequest(BaseModel):
+    recipe: Recipe
+    ingredient_name: str
+
+    @field_validator("ingredient_name")
+    @classmethod
+    def ingredient_name_not_empty(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Ingredient name must not be empty")
+        return cleaned
+
+
+class IngredientSubstitutionRequest(BaseModel):
+    recipe: Recipe
+    old_ingredient_name: str
+    new_ingredient_name: str
+
+    @field_validator("old_ingredient_name", "new_ingredient_name")
+    @classmethod
+    def substitution_names_not_empty(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Ingredient name must not be empty")
+        return cleaned
+
+
+class IngredientEditResponse(BaseModel):
+    assistant_message: str
+    recipe: Recipe
 
 
 class GeminiActionEnvelope(BaseModel):

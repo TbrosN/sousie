@@ -5,6 +5,9 @@ APP_VERSION = "0.1.0"
 
 API_PREFIX = "/api"
 CHAT_ENDPOINT = f"{API_PREFIX}/chat"
+INGREDIENT_SUBSTITUTIONS_ENDPOINT = f"{API_PREFIX}/ingredient-substitutions"
+INGREDIENT_REMOVE_ENDPOINT = f"{API_PREFIX}/ingredient-remove"
+INGREDIENT_SUBSTITUTE_ENDPOINT = f"{API_PREFIX}/ingredient-substitute"
 HEALTH_ENDPOINT = "/health"
 
 RUNTIME_DATA_DIR = Path("data/runtime")
@@ -23,6 +26,9 @@ SYSTEM_PROMPT = (
     "In this phase, use replace_recipe. "
     "Phase 2 (revision and questions): after a full draft exists, treat each new user request as either "
     "a revision request or a cooking question. For revisions, choose the smallest tool action that satisfies the request. "
+    "When revising ingredients, the recipe must remain coherent in both structured ingredient lists and visible step instructions. "
+    "Do not claim an ingredient was removed or substituted if the updated recipe still visibly uses it in instructions. "
+    "If a simple ingredient tool is not enough, combine actions or use replace_recipe. "
     "For questions, respond conversationally without forcing recipe edits. "
     "You can be agentic within one turn: Make multiple tool calls and output text in one response. "
     "Always include a concise user-facing summary of what you changed, if you changed the recipe."

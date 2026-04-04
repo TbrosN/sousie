@@ -47,6 +47,49 @@ class GeminiClient:
         normalized = self._normalize_envelope(parsed)
         return GeminiActionEnvelope.model_validate(normalized)
 
+    async def suggest_ingredient_substitutions(
+        self,
+        recipe: Recipe,
+        ingredient_name: str,
+    ) -> list[str]:
+        if not self._api_key:
+            raise RuntimeError("GEMINI_API_KEY is not configured")
+
+        url = GEMINI_API_URL_TEMPLATE.format(model=self._model, api_key=self._api_key)
+        prompt_payload = self._build_substitutions_prompt(recipe, ingredient_name)
+
+        response_json = await self._request_with_retry(url, prompt_payload)
+        content_text = self._extract_text(response_json)
+        try:
+            parsed = json.loads(content_text)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("Gemini returned invalid JSON output") from exc
+
+        substitutions = parsed.get("substitutions")
+        if not isinstance(substitutions, list):
+            raise RuntimeError("Gemini substitutions response was malformed")
+
+        normalized: list[str] = []
+        seen: set[str] = set()
+        ingredient_name_normalized = ingredient_name.strip().lower()
+        for item in substitutions:
+            if not isinstance(item, str):
+                continue
+            cleaned = item.strip()
+            if not cleaned:
+                continue
+            lowered = cleaned.lower()
+            if lowered == ingredient_name_normalized or lowered in seen:
+                continue
+            seen.add(lowered)
+            normalized.append(cleaned)
+            if len(normalized) >= 5:
+                break
+
+        if not normalized:
+            raise RuntimeError("Gemini returned no ingredient substitutions")
+        return normalized
+
     async def _request_with_retry(self, url: str, prompt_payload: str) -> dict[str, Any]:
         request_body = {
             "contents": [{"parts": [{"text": prompt_payload}]}],
@@ -122,6 +165,27 @@ class GeminiClient:
                 "actions": [
                     {"type": "object", "required": ["type"], "description": "ordered tool payload"}
                 ],
+            },
+        }
+        return json.dumps(instruction)
+
+    def _build_substitutions_prompt(self, recipe: Recipe, ingredient_name: str) -> str:
+        instruction = {
+            "system_prompt": (
+                "You are helping a cooking app suggest ingredient substitutions. "
+                "Return only practical replacements that fit the recipe context."
+            ),
+            "recipe": recipe.model_dump(),
+            "ingredient_to_replace": ingredient_name,
+            "output_rules": [
+                "Return plain JSON only.",
+                "Return 3 to 5 substitution options.",
+                "Favor substitutes that preserve the recipe's flavor, texture, and cooking method.",
+                "Use concise ingredient names only, not sentences.",
+                "Do not include the original ingredient.",
+            ],
+            "response_schema": {
+                "substitutions": ["string", "string", "string"],
             },
         }
         return json.dumps(instruction)

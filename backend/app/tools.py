@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Callable
 
 from langchain_core.tools import BaseTool, StructuredTool
@@ -35,7 +36,7 @@ def remove_ingredient(recipe: Recipe, name: str) -> Recipe:
         step.ingredients = [
             item
             for item in step.ingredients
-            if item.name.strip().lower() != name.strip().lower()
+            if not _ingredient_names_match(item.name, name)
         ]
     return recipe
 
@@ -43,7 +44,7 @@ def remove_ingredient(recipe: Recipe, name: str) -> Recipe:
 def substitute_ingredient(recipe: Recipe, old_name: str, new_name: str) -> Recipe:
     for step in recipe.steps:
         for ingredient in step.ingredients:
-            if ingredient.name.strip().lower() == old_name.strip().lower():
+            if _ingredient_names_match(ingredient.name, old_name):
                 ingredient.name = new_name
     return recipe
 
@@ -86,12 +87,12 @@ def build_tools() -> dict[str, BaseTool]:
         ),
         "remove_ingredient": _tool(
             "remove_ingredient",
-            "Remove ingredient by name from all steps.",
+            "Remove ingredient by name from all step ingredient lists only. This does not rewrite instructions.",
             remove_ingredient,
         ),
         "substitute_ingredient": _tool(
             "substitute_ingredient",
-            "Swap one ingredient name for another across steps.",
+            "Swap one ingredient name for another across step ingredient lists only. This does not rewrite instructions.",
             substitute_ingredient,
         ),
         "replace_instructions": _tool(
@@ -132,12 +133,12 @@ def build_tool_prompt_contract() -> list[dict[str, object]]:
         },
         {
             "name": "remove_ingredient",
-            "description": "Remove ingredient by name from all steps.",
+            "description": "Remove ingredient by name from all step ingredient lists only. This does not rewrite instructions.",
             "payload_schema": {"type": "remove_ingredient", "name": "string"},
         },
         {
             "name": "substitute_ingredient",
-            "description": "Swap one ingredient name for another across steps.",
+            "description": "Swap one ingredient name for another across step ingredient lists only. This does not rewrite instructions.",
             "payload_schema": {
                 "type": "substitute_ingredient",
                 "old_name": "string",
@@ -230,3 +231,32 @@ def _normalize_action_payload(action_payload: dict[str, object]) -> dict[str, ob
     normalized = {**schema_payload, **action_payload}
     normalized.pop("schema", None)
     return normalized
+
+
+def _ingredient_names_match(candidate_name: str, query_name: str) -> bool:
+    candidate_normalized = _normalize_ingredient_name(candidate_name)
+    query_normalized = _normalize_ingredient_name(query_name)
+    if not candidate_normalized or not query_normalized:
+        return False
+    if candidate_normalized == query_normalized:
+        return True
+
+    candidate_tokens = set(candidate_normalized.split())
+    query_tokens = set(query_normalized.split())
+    return bool(query_tokens) and query_tokens.issubset(candidate_tokens)
+
+
+def _normalize_ingredient_name(value: str) -> str:
+    raw_tokens = re.findall(r"[a-z0-9]+", value.lower())
+    normalized_tokens = [_singularize_token(token) for token in raw_tokens if token]
+    return " ".join(normalized_tokens)
+
+
+def _singularize_token(token: str) -> str:
+    if len(token) > 4 and token.endswith("ies"):
+        return token[:-3] + "y"
+    if len(token) > 3 and token.endswith("es") and not token.endswith("ses"):
+        return token[:-2]
+    if len(token) > 2 and token.endswith("s") and not token.endswith("ss"):
+        return token[:-1]
+    return token

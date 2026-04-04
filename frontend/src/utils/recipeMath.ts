@@ -50,3 +50,9 @@ export function formatQuantity(value: number): string {
   const rounded = Math.round(value * 100) / 100;
   return Number.isInteger(rounded) ? `${rounded}` : `${rounded.toFixed(2)}`;
 }
+
+export function formatQuantityWithUnit(quantity: number, unit: string): string {
+  const formattedQuantity = formatQuantity(quantity);
+  const cleanedUnit = unit.trim();
+  return cleanedUnit ? `${formattedQuantity} ${cleanedUnit}` : formattedQuantity;
+}

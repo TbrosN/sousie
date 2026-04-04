@@ -662,3 +662,19 @@ there should be no "determinstic action" setup like this. this needs to be AGENT
 @backend/app/chat_service.py:55-68 again, why do we have this? We should be able to use the langchain tools directly and have the llm just calling the functions
 
 also, the llm should be prompted to always output a concise summary of what it did. Like "ok, I swapped out the cocoa butter for avocado oil" or whatever. So even if it makes tool calls, the user still gets some kind of coherent response back and knows whats going on.
+
+lets make the ingredients at the top of the recipe editor tappable. When tapped, the user sees these options:
+- Remove ingredient
+- Swap ingredient
+
+If remove ingredient is selected, the llm receives a prompt to remove that ingredient, and our existing agentic flow will let it make any adjustments necessary to the recipe.
+
+If swap ingredient is selected, we make an llm call to fetch good replacements for the ingredient, and we show those as tappable options. When an option is tapped, the llm again receives a prompt to change the ingredient, and it will og and adjust portions and stuff autonomously through our existing agent flow.
+
+Make sure that both actions are represented clearly in the chat history, something like "user requested ingredient removal for X" or "user requested substitution of X for Y"
+
+hmm I tried to remove "Egg" from a recipe, and it seemed to send the correct msg to the chatbot, who responded saying something like "I updated the recipe and removed Egg". Yet on the FE at least, I still see Egg being used
+
+still not working. For debugging, why dont we have the remove ingredient button just run our deterministic remove ingredient function. Then we can see if it works.
+
+yeah I agree. Let's use similar logic for replacements. What should happen is: FE calls backend route for removal/replacement. We deterministacally make the removal or replacement, then tell the llm this ingredient was swapped/replaced, and it should make any adjustments encessary to the recipe, if needed.

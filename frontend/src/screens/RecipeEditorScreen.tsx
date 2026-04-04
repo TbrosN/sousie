@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { ChatBottomSheet } from "@/src/components/ChatBottomSheet";
+import { IngredientActionModal } from "@/src/components/IngredientActionModal";
 import { RecipeView } from "@/src/components/RecipeView";
 import { UI_COPY } from "@/src/constants/app";
 import { LOG_MESSAGES } from "@/src/constants/logMessages";
@@ -27,6 +28,9 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
   const [draftMessage, setDraftMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const [selectedIngredientName, setSelectedIngredientName] = useState("");
+  const [substitutionOptions, setSubstitutionOptions] = useState<string[]>([]);
+  const [isLoadingSubstitutions, setIsLoadingSubstitutions] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [activeRecipe, setActiveRecipe] = useState<Recipe | undefined>(recipe);
 
@@ -121,6 +125,160 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
     });
   }
 
+  const closeIngredientModal = useCallback(() => {
+    setSelectedIngredientName("");
+    setSubstitutionOptions([]);
+    setIsLoadingSubstitutions(false);
+  }, []);
+
+  const handleIngredientPress = useCallback(
+    (ingredientName: string) => {
+      if (isSending) {
+        return;
+      }
+      if (!isOnline) {
+        setErrorMessage(UI_COPY.offlineHint);
+        return;
+      }
+      setErrorMessage("");
+      setSelectedIngredientName(ingredientName);
+      setSubstitutionOptions([]);
+    },
+    [isOnline, isSending]
+  );
+
+  const handleIngredientRemoval = useCallback(async () => {
+    if (!activeRecipe || !selectedIngredientName) {
+      return;
+    }
+    if (!isOnline) {
+      setErrorMessage(UI_COPY.offlineHint);
+      return;
+    }
+    closeIngredientModal();
+    setErrorMessage("");
+    setIsSending(true);
+    const snapshot = messages;
+    const userMessage: ChatMessage = {
+      id: buildId("msg"),
+      role: "user",
+      content: `User requested ingredient removal for ${selectedIngredientName}.`,
+      createdAt: new Date().toISOString(),
+    };
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
+
+    try {
+      const result = await BackendClient.removeIngredient(activeRecipe, selectedIngredientName);
+      const assistantMessage: ChatMessage = {
+        id: buildId("msg"),
+        role: "assistant",
+        content: result.assistantMessage,
+        createdAt: new Date().toISOString(),
+      };
+      const updatedRecipe = result.recipe;
+      const persistedMessages = [...nextMessages, assistantMessage];
+      setMessages(persistedMessages);
+      setActiveRecipe(updatedRecipe);
+      await updateRecipe(updatedRecipe);
+      await StorageService.writeChatMessages(recipeId, persistedMessages);
+    } catch (error) {
+      logWarning(LOG_MESSAGES.chatRequestFailed, error);
+      setMessages(snapshot);
+      setErrorMessage(UI_COPY.chatUnavailable);
+    } finally {
+      setIsSending(false);
+    }
+  }, [
+    activeRecipe,
+    closeIngredientModal,
+    isOnline,
+    messages,
+    recipeId,
+    selectedIngredientName,
+    updateRecipe,
+  ]);
+
+  const handleSwapRequest = useCallback(async () => {
+    if (!activeRecipe || !selectedIngredientName) {
+      return;
+    }
+    setIsLoadingSubstitutions(true);
+    setErrorMessage("");
+    try {
+      const substitutions = await BackendClient.suggestIngredientSubstitutions(
+        activeRecipe,
+        selectedIngredientName
+      );
+      setSubstitutionOptions(substitutions);
+    } catch (error) {
+      logWarning(LOG_MESSAGES.ingredientSubstitutionsFailed, error);
+      closeIngredientModal();
+      setErrorMessage(UI_COPY.chatUnavailable);
+    } finally {
+      setIsLoadingSubstitutions(false);
+    }
+  }, [activeRecipe, closeIngredientModal, selectedIngredientName]);
+
+  const handleSubstitutionSelect = useCallback(
+    async (substitution: string) => {
+      if (!activeRecipe || !selectedIngredientName) {
+        return;
+      }
+      if (!isOnline) {
+        setErrorMessage(UI_COPY.offlineHint);
+        return;
+      }
+      closeIngredientModal();
+      setErrorMessage("");
+      setIsSending(true);
+      const snapshot = messages;
+      const userMessage: ChatMessage = {
+        id: buildId("msg"),
+        role: "user",
+        content: `User requested substitution of ${selectedIngredientName} for ${substitution}.`,
+        createdAt: new Date().toISOString(),
+      };
+      const nextMessages = [...messages, userMessage];
+      setMessages(nextMessages);
+
+      try {
+        const result = await BackendClient.substituteIngredient(
+          activeRecipe,
+          selectedIngredientName,
+          substitution
+        );
+        const assistantMessage: ChatMessage = {
+          id: buildId("msg"),
+          role: "assistant",
+          content: result.assistantMessage,
+          createdAt: new Date().toISOString(),
+        };
+        const updatedRecipe = result.recipe;
+        const persistedMessages = [...nextMessages, assistantMessage];
+        setMessages(persistedMessages);
+        setActiveRecipe(updatedRecipe);
+        await updateRecipe(updatedRecipe);
+        await StorageService.writeChatMessages(recipeId, persistedMessages);
+      } catch (error) {
+        logWarning(LOG_MESSAGES.chatRequestFailed, error);
+        setMessages(snapshot);
+        setErrorMessage(UI_COPY.chatUnavailable);
+      } finally {
+        setIsSending(false);
+      }
+    },
+    [
+      activeRecipe,
+      closeIngredientModal,
+      isOnline,
+      messages,
+      recipeId,
+      selectedIngredientName,
+      updateRecipe,
+    ]
+  );
+
   if (!recipeId) {
     return (
       <View style={styles.centered}>
@@ -139,7 +297,26 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
 
   return (
     <View style={styles.container}>
-      <RecipeView recipe={activeRecipe} bottomInset={THEME.layout.recipeEditorChatBottomInset} />
+      <RecipeView
+        recipe={activeRecipe}
+        bottomInset={THEME.layout.recipeEditorChatBottomInset}
+        onIngredientPress={handleIngredientPress}
+        ingredientsDisabled={isSending}
+      />
+      <IngredientActionModal
+        visible={selectedIngredientName.length > 0}
+        ingredientName={selectedIngredientName}
+        substitutions={substitutionOptions}
+        isLoadingSubstitutions={isLoadingSubstitutions}
+        onClose={closeIngredientModal}
+        onRemove={() => {
+          void handleIngredientRemoval();
+        }}
+        onSwap={() => {
+          void handleSwapRequest();
+        }}
+        onSelectSubstitution={handleSubstitutionSelect}
+      />
       <ChatBottomSheet
         isOnline={isOnline}
         messages={messages}

@@ -15,10 +15,21 @@ from app.constants import (
     ERROR_MESSAGE_AI_UNAVAILABLE,
     ERROR_MESSAGE_GENERIC,
     HEALTH_ENDPOINT,
+    INGREDIENT_REMOVE_ENDPOINT,
+    INGREDIENT_SUBSTITUTIONS_ENDPOINT,
+    INGREDIENT_SUBSTITUTE_ENDPOINT,
 )
 from app.gemini_client import GeminiClient
 from app.logging_config import configure_logging
-from app.models import ChatRequest, ChatResponse
+from app.models import (
+    ChatRequest,
+    ChatResponse,
+    IngredientEditResponse,
+    IngredientRemovalRequest,
+    IngredientSubstitutionRequest,
+    IngredientSubstitutionsRequest,
+    IngredientSubstitutionsResponse,
+)
 
 load_dotenv()
 configure_logging()
@@ -63,6 +74,68 @@ async def chat(request: ChatRequest) -> ChatResponse:
         raise HTTPException(status_code=503, detail=ERROR_MESSAGE_AI_UNAVAILABLE) from exc
     except Exception as exc:
         logger.error("Fatal unknown error during chat: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=ERROR_MESSAGE_GENERIC) from exc
+
+
+@app.post(
+    INGREDIENT_SUBSTITUTIONS_ENDPOINT,
+    response_model=IngredientSubstitutionsResponse,
+)
+async def ingredient_substitutions(
+    request: IngredientSubstitutionsRequest,
+) -> IngredientSubstitutionsResponse:
+    try:
+        return await chat_service.suggest_ingredient_substitutions(
+            recipe=request.recipe,
+            ingredient_name=request.ingredient_name,
+        )
+    except ValueError as exc:
+        logger.warning("Non-fatal substitutions warning: %s", exc, exc_info=True)
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGE_GENERIC) from exc
+    except RuntimeError as exc:
+        logger.error("Fatal runtime error during substitutions: %s", exc, exc_info=True)
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGE_AI_UNAVAILABLE) from exc
+    except Exception as exc:
+        logger.error("Fatal unknown error during substitutions: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=ERROR_MESSAGE_GENERIC) from exc
+
+
+@app.post(INGREDIENT_REMOVE_ENDPOINT, response_model=IngredientEditResponse)
+async def ingredient_remove(request: IngredientRemovalRequest) -> IngredientEditResponse:
+    try:
+        return await chat_service.handle_ingredient_removal(
+            recipe=request.recipe,
+            ingredient_name=request.ingredient_name,
+        )
+    except ValueError as exc:
+        logger.warning("Non-fatal ingredient removal warning: %s", exc, exc_info=True)
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGE_GENERIC) from exc
+    except RuntimeError as exc:
+        logger.error("Fatal runtime error during ingredient removal: %s", exc, exc_info=True)
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGE_AI_UNAVAILABLE) from exc
+    except Exception as exc:
+        logger.error("Fatal unknown error during ingredient removal: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=ERROR_MESSAGE_GENERIC) from exc
+
+
+@app.post(INGREDIENT_SUBSTITUTE_ENDPOINT, response_model=IngredientEditResponse)
+async def ingredient_substitute(
+    request: IngredientSubstitutionRequest,
+) -> IngredientEditResponse:
+    try:
+        return await chat_service.handle_ingredient_substitution(
+            recipe=request.recipe,
+            old_ingredient_name=request.old_ingredient_name,
+            new_ingredient_name=request.new_ingredient_name,
+        )
+    except ValueError as exc:
+        logger.warning("Non-fatal ingredient substitution warning: %s", exc, exc_info=True)
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGE_GENERIC) from exc
+    except RuntimeError as exc:
+        logger.error("Fatal runtime error during ingredient substitution: %s", exc, exc_info=True)
+        raise HTTPException(status_code=503, detail=ERROR_MESSAGE_AI_UNAVAILABLE) from exc
+    except Exception as exc:
+        logger.error("Fatal unknown error during ingredient substitution: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=ERROR_MESSAGE_GENERIC) from exc
 
 if __name__ == "__main__":

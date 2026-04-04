@@ -3,6 +3,7 @@ export const LOG_MESSAGES = {
   chatRequestFailed: "Chat request failed.",
   createRecipeAiTurnFailed: "Failed to complete create-recipe AI request.",
   deleteChatFailed: "Failed to delete chat history from storage.",
+  ingredientSubstitutionsFailed: "Failed to fetch ingredient substitutions.",
   loadChatFailed: "Failed to load chat history from storage.",
   loadRecipesFailed: "Failed to load recipes from storage.",
   persistChatFailed: "Failed to persist chat history.",

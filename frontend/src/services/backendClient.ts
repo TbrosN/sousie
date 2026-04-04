@@ -30,6 +30,15 @@ type BackendChatResponse = {
   recipe: BackendRecipe;
 };
 
+type BackendIngredientSubstitutionsResponse = {
+  substitutions: string[];
+};
+
+type BackendIngredientEditResponse = {
+  assistant_message: string;
+  recipe: BackendRecipe;
+};
+
 export class BackendClient {
   static async sendChat(
     recipe: Recipe,
@@ -62,6 +71,92 @@ export class BackendClient {
     }
 
     const payload = (await response.json()) as BackendChatResponse;
+    return {
+      assistantMessage: payload.assistant_message,
+      recipe: fromBackendRecipe(payload.recipe, recipe.updatedAt),
+    };
+  }
+
+  static async suggestIngredientSubstitutions(
+    recipe: Recipe,
+    ingredientName: string
+  ): Promise<string[]> {
+    const response = await fetch(
+      `${BACKEND_CONFIG.baseUrl}${BACKEND_CONFIG.ingredientSubstitutionsPath}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          recipe: toBackendRecipe(recipe),
+          ingredient_name: ingredientName,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Backend substitutions request failed");
+    }
+
+    const payload = (await response.json()) as BackendIngredientSubstitutionsResponse;
+    return payload.substitutions;
+  }
+
+  static async removeIngredient(
+    recipe: Recipe,
+    ingredientName: string
+  ): Promise<{ assistantMessage: string; recipe: Recipe }> {
+    const response = await fetch(
+      `${BACKEND_CONFIG.baseUrl}${BACKEND_CONFIG.ingredientRemovePath}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          recipe: toBackendRecipe(recipe),
+          ingredient_name: ingredientName,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Backend ingredient removal request failed");
+    }
+
+    const payload = (await response.json()) as BackendIngredientEditResponse;
+    return {
+      assistantMessage: payload.assistant_message,
+      recipe: fromBackendRecipe(payload.recipe, recipe.updatedAt),
+    };
+  }
+
+  static async substituteIngredient(
+    recipe: Recipe,
+    oldIngredientName: string,
+    newIngredientName: string
+  ): Promise<{ assistantMessage: string; recipe: Recipe }> {
+    const response = await fetch(
+      `${BACKEND_CONFIG.baseUrl}${BACKEND_CONFIG.ingredientSubstitutePath}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          recipe: toBackendRecipe(recipe),
+          old_ingredient_name: oldIngredientName,
+          new_ingredient_name: newIngredientName,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Backend ingredient substitution request failed");
+    }
+
+    const payload = (await response.json()) as BackendIngredientEditResponse;
     return {
       assistantMessage: payload.assistant_message,
       recipe: fromBackendRecipe(payload.recipe, recipe.updatedAt),
