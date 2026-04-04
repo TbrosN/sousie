@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { ChatBottomSheet } from "@/src/components/ChatBottomSheet";
-import { IngredientActionModal } from "@/src/components/IngredientActionModal";
+import { ConfirmDialog } from "@/src/components/ConfirmDialog";
+import { IngredientSwapModal } from "@/src/components/IngredientSwapModal";
+import { ChefModeModal } from "@/src/components/ChefModeModal";
 import { RecipeView } from "@/src/components/RecipeView";
-import { UI_COPY } from "@/src/constants/app";
+import { formatIngredientDeleteConfirmMessage, UI_COPY } from "@/src/constants/app";
 import { LOG_MESSAGES } from "@/src/constants/logMessages";
 import { THEME } from "@/src/constants/theme";
 import { useRecipes } from "@/src/context/RecipesContext";
@@ -28,11 +30,14 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
   const [draftMessage, setDraftMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isSending, setIsSending] = useState(false);
-  const [selectedIngredientName, setSelectedIngredientName] = useState("");
+  const [swapIngredientName, setSwapIngredientName] = useState("");
   const [substitutionOptions, setSubstitutionOptions] = useState<string[]>([]);
   const [isLoadingSubstitutions, setIsLoadingSubstitutions] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [activeRecipe, setActiveRecipe] = useState<Recipe | undefined>(recipe);
+  const [isChefModeVisible, setIsChefModeVisible] = useState(false);
+  const [chefModeStepIndex, setChefModeStepIndex] = useState(0);
+  const [ingredientDeleteConfirmName, setIngredientDeleteConfirmName] = useState<string | null>(null);
 
   useEffect(() => {
     setActiveRecipe(recipe);
@@ -125,13 +130,104 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
     });
   }
 
-  const closeIngredientModal = useCallback(() => {
-    setSelectedIngredientName("");
+  const closeSwapModal = useCallback(() => {
+    setSwapIngredientName("");
     setSubstitutionOptions([]);
     setIsLoadingSubstitutions(false);
   }, []);
 
-  const handleIngredientPress = useCallback(
+  const handleIngredientSwapPress = useCallback(
+    async (ingredientName: string) => {
+      if (isSending) {
+        return;
+      }
+      if (!isOnline) {
+        setErrorMessage(UI_COPY.offlineHint);
+        return;
+      }
+      if (!activeRecipe) {
+        return;
+      }
+      setErrorMessage("");
+      setSwapIngredientName(ingredientName);
+      setSubstitutionOptions([]);
+      setIsLoadingSubstitutions(true);
+      try {
+        const substitutions = await BackendClient.suggestIngredientSubstitutions(
+          activeRecipe,
+          ingredientName
+        );
+        setSubstitutionOptions(substitutions);
+      } catch (error) {
+        logWarning(LOG_MESSAGES.ingredientSubstitutionsFailed, error);
+        closeSwapModal();
+        setErrorMessage(UI_COPY.chatUnavailable);
+      } finally {
+        setIsLoadingSubstitutions(false);
+      }
+    },
+    [activeRecipe, closeSwapModal, isOnline, isSending]
+  );
+
+  const openChefMode = useCallback(() => {
+    if (!activeRecipe || activeRecipe.steps.length === 0) {
+      return;
+    }
+    setChefModeStepIndex(0);
+    setIsChefModeVisible(true);
+  }, [activeRecipe]);
+
+  const closeChefMode = useCallback(() => {
+    setIsChefModeVisible(false);
+  }, []);
+
+  const handleIngredientRemoval = useCallback(
+    async (ingredientName: string) => {
+      if (!activeRecipe) {
+        return;
+      }
+      if (!isOnline) {
+        setErrorMessage(UI_COPY.offlineHint);
+        return;
+      }
+      setErrorMessage("");
+      setIsSending(true);
+      const snapshot = messages;
+      const userMessage: ChatMessage = {
+        id: buildId("msg"),
+        role: "user",
+        content: `User requested ingredient removal for ${ingredientName}.`,
+        createdAt: new Date().toISOString(),
+      };
+      const nextMessages = [...messages, userMessage];
+      setMessages(nextMessages);
+
+      try {
+        const result = await BackendClient.removeIngredient(activeRecipe, ingredientName);
+        const assistantMessage: ChatMessage = {
+          id: buildId("msg"),
+          role: "assistant",
+          content: result.assistantMessage,
+          createdAt: new Date().toISOString(),
+        };
+        const updatedRecipe = result.recipe;
+        const persistedMessages = [...nextMessages, assistantMessage];
+        setMessages(persistedMessages);
+        setActiveRecipe(updatedRecipe);
+        await updateRecipe(updatedRecipe);
+        await StorageService.writeChatMessages(recipeId, persistedMessages);
+      } catch (error) {
+        logWarning(LOG_MESSAGES.chatRequestFailed, error);
+        setMessages(snapshot);
+        setErrorMessage(UI_COPY.chatUnavailable);
+      } finally {
+        setIsSending(false);
+      }
+    },
+    [activeRecipe, isOnline, messages, recipeId, updateRecipe]
+  );
+
+  const handleIngredientRemovePress = useCallback(
     (ingredientName: string) => {
       if (isSending) {
         return;
@@ -141,102 +237,42 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
         return;
       }
       setErrorMessage("");
-      setSelectedIngredientName(ingredientName);
-      setSubstitutionOptions([]);
+      setIngredientDeleteConfirmName(ingredientName);
     },
     [isOnline, isSending]
   );
 
-  const handleIngredientRemoval = useCallback(async () => {
-    if (!activeRecipe || !selectedIngredientName) {
-      return;
-    }
-    if (!isOnline) {
-      setErrorMessage(UI_COPY.offlineHint);
-      return;
-    }
-    closeIngredientModal();
-    setErrorMessage("");
-    setIsSending(true);
-    const snapshot = messages;
-    const userMessage: ChatMessage = {
-      id: buildId("msg"),
-      role: "user",
-      content: `User requested ingredient removal for ${selectedIngredientName}.`,
-      createdAt: new Date().toISOString(),
-    };
-    const nextMessages = [...messages, userMessage];
-    setMessages(nextMessages);
+  const closeIngredientDeleteDialog = useCallback(() => {
+    setIngredientDeleteConfirmName(null);
+  }, []);
 
-    try {
-      const result = await BackendClient.removeIngredient(activeRecipe, selectedIngredientName);
-      const assistantMessage: ChatMessage = {
-        id: buildId("msg"),
-        role: "assistant",
-        content: result.assistantMessage,
-        createdAt: new Date().toISOString(),
-      };
-      const updatedRecipe = result.recipe;
-      const persistedMessages = [...nextMessages, assistantMessage];
-      setMessages(persistedMessages);
-      setActiveRecipe(updatedRecipe);
-      await updateRecipe(updatedRecipe);
-      await StorageService.writeChatMessages(recipeId, persistedMessages);
-    } catch (error) {
-      logWarning(LOG_MESSAGES.chatRequestFailed, error);
-      setMessages(snapshot);
-      setErrorMessage(UI_COPY.chatUnavailable);
-    } finally {
-      setIsSending(false);
-    }
-  }, [
-    activeRecipe,
-    closeIngredientModal,
-    isOnline,
-    messages,
-    recipeId,
-    selectedIngredientName,
-    updateRecipe,
-  ]);
-
-  const handleSwapRequest = useCallback(async () => {
-    if (!activeRecipe || !selectedIngredientName) {
+  const confirmIngredientDelete = useCallback(() => {
+    if (!ingredientDeleteConfirmName) {
       return;
     }
-    setIsLoadingSubstitutions(true);
-    setErrorMessage("");
-    try {
-      const substitutions = await BackendClient.suggestIngredientSubstitutions(
-        activeRecipe,
-        selectedIngredientName
-      );
-      setSubstitutionOptions(substitutions);
-    } catch (error) {
-      logWarning(LOG_MESSAGES.ingredientSubstitutionsFailed, error);
-      closeIngredientModal();
-      setErrorMessage(UI_COPY.chatUnavailable);
-    } finally {
-      setIsLoadingSubstitutions(false);
-    }
-  }, [activeRecipe, closeIngredientModal, selectedIngredientName]);
+    const name = ingredientDeleteConfirmName;
+    setIngredientDeleteConfirmName(null);
+    void handleIngredientRemoval(name);
+  }, [handleIngredientRemoval, ingredientDeleteConfirmName]);
 
   const handleSubstitutionSelect = useCallback(
     async (substitution: string) => {
-      if (!activeRecipe || !selectedIngredientName) {
+      if (!activeRecipe || !swapIngredientName) {
         return;
       }
       if (!isOnline) {
         setErrorMessage(UI_COPY.offlineHint);
         return;
       }
-      closeIngredientModal();
+      const ingredientBeingSwapped = swapIngredientName;
+      closeSwapModal();
       setErrorMessage("");
       setIsSending(true);
       const snapshot = messages;
       const userMessage: ChatMessage = {
         id: buildId("msg"),
         role: "user",
-        content: `User requested substitution of ${selectedIngredientName} for ${substitution}.`,
+        content: `User requested substitution of ${ingredientBeingSwapped} for ${substitution}.`,
         createdAt: new Date().toISOString(),
       };
       const nextMessages = [...messages, userMessage];
@@ -245,7 +281,7 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
       try {
         const result = await BackendClient.substituteIngredient(
           activeRecipe,
-          selectedIngredientName,
+          ingredientBeingSwapped,
           substitution
         );
         const assistantMessage: ChatMessage = {
@@ -270,11 +306,11 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
     },
     [
       activeRecipe,
-      closeIngredientModal,
+      closeSwapModal,
       isOnline,
       messages,
       recipeId,
-      selectedIngredientName,
+      swapIngredientName,
       updateRecipe,
     ]
   );
@@ -299,33 +335,51 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
     <View style={styles.container}>
       <RecipeView
         recipe={activeRecipe}
-        bottomInset={THEME.layout.recipeEditorChatBottomInset}
-        onIngredientPress={handleIngredientPress}
+        bottomInset={isChefModeVisible ? THEME.space.xxxl : THEME.layout.recipeEditorChatBottomInset}
+        onChefModePress={openChefMode}
+        onIngredientSwapPress={handleIngredientSwapPress}
+        onIngredientRemovePress={handleIngredientRemovePress}
         ingredientsDisabled={isSending}
       />
-      <IngredientActionModal
-        visible={selectedIngredientName.length > 0}
-        ingredientName={selectedIngredientName}
+      <IngredientSwapModal
+        visible={swapIngredientName.length > 0}
+        ingredientName={swapIngredientName}
         substitutions={substitutionOptions}
         isLoadingSubstitutions={isLoadingSubstitutions}
-        onClose={closeIngredientModal}
-        onRemove={() => {
-          void handleIngredientRemoval();
-        }}
-        onSwap={() => {
-          void handleSwapRequest();
-        }}
+        onClose={closeSwapModal}
         onSelectSubstitution={handleSubstitutionSelect}
       />
-      <ChatBottomSheet
-        isOnline={isOnline}
-        messages={messages}
-        draftMessage={draftMessage}
-        onDraftChange={setDraftMessage}
-        onSubmit={handleSubmit}
-        isSending={isSending}
-        errorMessage={errorMessage}
+      <ConfirmDialog
+        visible={ingredientDeleteConfirmName != null}
+        title={UI_COPY.ingredientDeleteConfirmTitle}
+        message={
+          ingredientDeleteConfirmName
+            ? formatIngredientDeleteConfirmMessage(ingredientDeleteConfirmName)
+            : ""
+        }
+        cancelLabel={UI_COPY.deleteRecipeConfirmCancel}
+        confirmLabel={UI_COPY.ingredientRemove}
+        onCancel={closeIngredientDeleteDialog}
+        onConfirm={confirmIngredientDelete}
       />
+      <ChefModeModal
+        recipe={activeRecipe}
+        visible={isChefModeVisible}
+        currentStepIndex={chefModeStepIndex}
+        onStepChange={setChefModeStepIndex}
+        onClose={closeChefMode}
+      />
+      {!isChefModeVisible ? (
+        <ChatBottomSheet
+          isOnline={isOnline}
+          messages={messages}
+          draftMessage={draftMessage}
+          onDraftChange={setDraftMessage}
+          onSubmit={handleSubmit}
+          isSending={isSending}
+          errorMessage={errorMessage}
+        />
+      ) : null}
     </View>
   );
 }

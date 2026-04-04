@@ -18,6 +18,7 @@ import { ChatMessage } from "@/src/types/chat";
 
 import { ChatMessageList } from "./ChatMessageList";
 import { ErrorBanner } from "./ErrorBanner";
+import { GlassSurface } from "./GlassSurface";
 
 type ChatBottomSheetProps = {
   isOnline: boolean;
@@ -145,27 +146,30 @@ export function ChatBottomSheet({
                 : styles.inputContainerCollapsed,
             ]}
           >
-            <View style={styles.inputRow}>
-              <TextInput
-                editable={!isSending}
-                value={draftMessage}
-                onChangeText={onDraftChange}
-                onPressIn={() => setIsExpanded(true)}
-                placeholder={UI_COPY.aiInputPlaceholder}
-                style={styles.input}
-                multiline={isExpanded}
-              />
-              <Pressable
-                accessibilityRole="button"
-                onPress={onSubmit}
-                disabled={sendDisabled}
-                style={[styles.sendButton, sendDisabled && styles.sendButtonDisabled]}
-              >
-                <Text style={styles.sendButtonText}>
-                  {isSending ? UI_COPY.chatSendingEllipsis : UI_COPY.chatSend}
-                </Text>
-              </Pressable>
-            </View>
+            <GlassSurface contentStyle={styles.composerSurface}>
+              <View style={styles.inputRow}>
+                <TextInput
+                  editable={!isSending}
+                  value={draftMessage}
+                  onChangeText={onDraftChange}
+                  onPressIn={() => setIsExpanded(true)}
+                  placeholder={UI_COPY.aiInputPlaceholder}
+                  placeholderTextColor={THEME.color.textMuted}
+                  style={styles.input}
+                  multiline={isExpanded}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={onSubmit}
+                  disabled={sendDisabled}
+                  style={[styles.sendButton, sendDisabled && styles.sendButtonDisabled]}
+                >
+                  <Text style={styles.sendButtonText}>
+                    {isSending ? UI_COPY.chatSendingEllipsis : UI_COPY.chatSend}
+                  </Text>
+                </Pressable>
+              </View>
+            </GlassSurface>
           </View>
         </View>
       </View>
@@ -183,7 +187,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: THEME.color.surface,
+    backgroundColor: THEME.color.surfaceMuted,
     borderTopLeftRadius: THEME.radius.sheetTop,
     borderTopRightRadius: THEME.radius.sheetTop,
     paddingHorizontal: THEME.space.xl,
@@ -229,10 +233,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: THEME.space.xl,
     right: THEME.space.xl,
+    borderRadius: THEME.radius.lg,
+  },
+  composerSurface: {
     paddingHorizontal: THEME.space.md,
     paddingTop: THEME.space.md,
     paddingBottom: THEME.space.md,
-    borderRadius: THEME.radius.lg,
     backgroundColor: THEME.color.composerOverlaySurface,
   },
   inputRow: {
@@ -246,16 +252,17 @@ const styles = StyleSheet.create({
     maxHeight: THEME.space.inputMaxHeight,
     borderWidth: 1,
     borderColor: THEME.color.borderMuted,
-    borderRadius: THEME.radius.md,
+    borderRadius: THEME.radius.lg,
     paddingHorizontal: THEME.space.lg,
     paddingVertical: THEME.space.md,
-    backgroundColor: THEME.color.surface,
+    backgroundColor: THEME.color.surfaceMuted,
+    color: THEME.color.textPrimary,
   },
   sendButton: {
     height: THEME.space.inputMinHeight,
     paddingHorizontal: THEME.space.xxl,
-    borderRadius: THEME.radius.md,
-    backgroundColor: THEME.color.primaryAction,
+    borderRadius: THEME.radius.lg,
+    backgroundColor: THEME.color.accentStrong,
     justifyContent: "center",
     alignItems: "center",
   },

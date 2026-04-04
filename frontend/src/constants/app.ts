@@ -16,13 +16,13 @@ export const UI_COPY = {
   genericError: "Something went wrong. Please try again.",
   emptyRecipes: "No recipes yet. Create your first one.",
   chatUnavailable: "AI is currently unavailable. Try again shortly.",
-  ingredientActionsTitle: "Ingredient options",
   ingredientSwapTitle: "Choose a replacement",
   ingredientRemove: "Remove ingredient",
-  ingredientSwap: "Swap ingredient",
   ingredientActionCancel: "Cancel",
   ingredientSuggestionsLoading: "Finding good replacements…",
-  ingredientTapHint: "Tap an ingredient to edit it with AI.",
+  ingredientSuggestionsEmpty: "No replacement suggestions right now. Try again later.",
+  ingredientTapHint: "Use swap or delete on each ingredient.",
+  ingredientDeleteConfirmTitle: "Remove ingredient?",
   chatSend: "Send",
   chatSendingEllipsis: "...",
   chatUserLabel: "You",
@@ -33,14 +33,31 @@ export const UI_COPY = {
   deleteRecipeConfirmCancel: "Cancel",
   deleteRecipeConfirmDelete: "Delete",
   servingsPrefix: "Servings:",
-  recipeTotalIngredientsTitle: "Total Ingredients",
+  recipeTotalIngredientsTitle: "All Ingredients",
+  recipeIngredientsSectionTitle: "Ingredients",
+  recipeStepsSectionTitle: "Method",
   recipeNoIngredientsYet: "No ingredients yet.",
+  ingredientsListExpandA11y: "Expand ingredients list",
+  ingredientsListCollapseA11y: "Collapse ingredients list",
   recipeStepPrefix: "Step",
   recipeIngredientLinePrefix: "- ",
+  openRecipeLabel: "Open recipe",
+  recipeCardHint: "Tap to open recipe",
+  chefModeTitle: "Chef mode",
+  chefModeSubtitle: "Focus on one step at a time",
+  chefModeEnter: "Start chef mode",
+  chefModeClose: "Close chef mode",
+  chefModeSwipeHint: "Swipe left or right to move between steps.",
+  chefModeEmpty: "This recipe needs at least one step before chef mode can begin.",
+  chefModeNoIngredients: "No ingredients",
 } as const;
 
 export function formatDeleteRecipeConfirmMessage(recipeTitle: string): string {
   return `Are you sure you want to delete "${recipeTitle}"? This cannot be undone.`;
+}
+
+export function formatIngredientDeleteConfirmMessage(ingredientName: string): string {
+  return `Remove "${ingredientName}" from every step in this recipe?`;
 }
 
 export function formatDeleteRecipeAccessibilityLabel(recipeTitle: string): string {
@@ -53,6 +70,17 @@ export function formatRecipeServingsLine(numServings: number): string {
 
 export function formatRecipeStepTitle(stepIndexZeroBased: number): string {
   return `${UI_COPY.recipeStepPrefix} ${stepIndexZeroBased + 1}`;
+}
+
+export function formatTotalIngredientCount(count: number): string {
+  return `${count} ${count === 1 ? "ingredient" : "ingredients"}`;
+}
+
+export function formatChefModeProgress(
+  stepIndexZeroBased: number,
+  totalSteps: number
+): string {
+  return `${UI_COPY.recipeStepPrefix} ${stepIndexZeroBased + 1} of ${totalSteps}`;
 }
 
 const apiBaseUrlFromEnv = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
