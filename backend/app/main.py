@@ -19,15 +19,13 @@ from app.constants import (
 from app.gemini_client import GeminiClient
 from app.logging_config import configure_logging
 from app.models import ChatRequest, ChatResponse
-from app.recipe_store import RecipeFileStore
 
 load_dotenv()
 configure_logging()
 logger = logging.getLogger(__name__)
 
-store = RecipeFileStore()
 gemini_client = GeminiClient()
-chat_service = ChatService(store=store, gemini_client=gemini_client)
+chat_service = ChatService(gemini_client=gemini_client)
 
 
 @asynccontextmanager

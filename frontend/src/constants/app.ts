@@ -13,7 +13,6 @@ export const UI_COPY = {
 } as const;
 
 export const UI_NUMBERS = {
-  maxChatMessagesForRequest: 10,
   collapsedInputBottomPadding: 12,
   expandedHeightRatio: 0.72,
   collapseSwipeThreshold: 48,

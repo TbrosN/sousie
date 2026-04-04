@@ -64,10 +64,7 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
         content: result.assistantMessage,
         createdAt: new Date().toISOString(),
       };
-      const updatedRecipe: Recipe = {
-        ...result.recipe,
-        updatedAt: new Date().toISOString(),
-      };
+      const updatedRecipe = result.recipe;
       setMessages((previous) => [...previous, assistantMessage]);
       setActiveRecipe(updatedRecipe);
       await updateRecipe(updatedRecipe);

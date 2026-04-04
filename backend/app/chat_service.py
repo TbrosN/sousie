@@ -21,21 +21,18 @@ from app.models import (
     StringReplaceAction,
     SubstituteIngredientAction,
 )
-from app.recipe_store import RecipeFileStore
 from app.tools import build_tools
 
 logger = logging.getLogger(__name__)
 
 
 class ChatService:
-    def __init__(self, store: RecipeFileStore, gemini_client: GeminiClient) -> None:
-        self._store = store
+    def __init__(self, gemini_client: GeminiClient) -> None:
         self._gemini_client = gemini_client
         self._tools = build_tools()
 
     async def handle_chat(self, request: ChatRequest) -> ChatResponse:
         recipe = request.recipe
-        self._store.save(recipe)
         recent_messages = request.messages[-MAX_CHAT_HISTORY:]
 
         action_payload, assistant_message = await self._select_action(
@@ -44,7 +41,6 @@ class ChatService:
             user_message=request.user_message,
         )
         updated_recipe = self._apply_action(recipe=recipe, action_payload=action_payload)
-        self._store.save(updated_recipe)
 
         return ChatResponse(
             assistant_message=assistant_message,

@@ -1,4 +1,4 @@
-import { BACKEND_CONFIG, UI_NUMBERS } from "@/src/constants/app";
+import { BACKEND_CONFIG } from "@/src/constants/app";
 import { ChatMessage } from "@/src/types/chat";
 import { Ingredient, Recipe, RecipeStep } from "@/src/types/recipe";
 
@@ -36,12 +36,10 @@ export class BackendClient {
     messages: ChatMessage[],
     userMessage: string
   ): Promise<{ assistantMessage: string; recipe: Recipe }> {
-    const recentMessages = messages
-      .slice(-UI_NUMBERS.maxChatMessagesForRequest)
-      .map<BackendMessage>((message) => ({
-        role: message.role,
-        content: message.content,
-      }));
+    const recentMessages = messages.map<BackendMessage>((message) => ({
+      role: message.role,
+      content: message.content,
+    }));
 
     const response = await fetch(
       `${BACKEND_CONFIG.baseUrl}${BACKEND_CONFIG.chatPath}`,
