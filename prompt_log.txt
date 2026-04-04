@@ -690,3 +690,9 @@ any error messages to the user should show in the chat area, similar to the chat
 Let's redesign the UI of this app to follow Apple design practices. Think dark mode and transparency. Also, ingredients should be clearly represented in the UI; it should be clear to the user that you can click on recipes to take actions (replace/delete). We should also display the recipe in a beautiful, easy to read way where ingredients are visibly distinct from instructions. Furthermore, we should add a "presentation mode" where the user can view the recipe steps one-at-a-time like a powerpoint presentation, easily swiping to go forward or back, but the step they're on is full screen and easy to read. Let's make a plan for this.
 
 the presentation mode isnt quite fullscreen; theres a bit of empty space at the bottom. Its okay to keep the padding there so the user doesnt accidentally hit the home btn when trying to press previous/next, but we should extend teh background of the rpesentation mode there so you cant see the recipe editor behind it
+
+amazing thank you. let's now make a couple more changes to presentation mode: put the presentation mode and step count on the left, and the X on the right. Remove the "close presentation mode". text. Put the ingredients at the top, boave the text instructions, since user needs to know those first. Remoev the previous and next buttons, since user can just swipe anyway.
+
+let's rebrand "presentation mode" to "chef mode"
+
+To open chef mode, let's make a little chef hat icon on the button, and rebranch the color accordingly

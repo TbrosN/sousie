@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
@@ -21,7 +21,7 @@ import { GlassSurface } from "./GlassSurface";
 type RecipeViewProps = {
   recipe: Recipe;
   bottomInset: number;
-  onPresentationModePress?: () => void;
+  onChefModePress?: () => void;
   onIngredientSwapPress?: (ingredientName: string) => void;
   onIngredientRemovePress?: (ingredientName: string) => void;
   ingredientsDisabled?: boolean;
@@ -30,7 +30,7 @@ type RecipeViewProps = {
 export function RecipeView({
   recipe,
   bottomInset,
-  onPresentationModePress,
+  onChefModePress,
   onIngredientSwapPress,
   onIngredientRemovePress,
   ingredientsDisabled = false,
@@ -53,21 +53,25 @@ export function RecipeView({
           </View>
           <Pressable
             accessibilityRole="button"
-            disabled={!onPresentationModePress || recipe.steps.length === 0}
-            onPress={onPresentationModePress}
+            disabled={!onChefModePress || recipe.steps.length === 0}
+            onPress={onChefModePress}
             style={({ pressed }) => [
-              styles.presentationButton,
-              pressed ? styles.presentationButtonPressed : null,
-              recipe.steps.length === 0 ? styles.presentationButtonDisabled : null,
+              styles.chefModeButton,
+              pressed ? styles.chefModeButtonPressed : null,
+              recipe.steps.length === 0 ? styles.chefModeButtonDisabled : null,
             ]}
           >
-            <Ionicons name="play-circle" size={22} color={THEME.color.onPrimary} />
-            <View style={styles.presentationCopy}>
-              <Text style={styles.presentationLabel}>{UI_COPY.presentationModeTitle}</Text>
-              <Text style={styles.presentationValue}>
+            <MaterialCommunityIcons
+              name="chef-hat"
+              size={26}
+              color={THEME.color.chefModeCtaForeground}
+            />
+            <View style={styles.chefModeCopy}>
+              <Text style={styles.chefModeLabel}>{UI_COPY.chefModeTitle}</Text>
+              <Text style={styles.chefModeValue}>
                 {recipe.steps.length === 0
-                  ? UI_COPY.presentationModeEmpty
-                  : UI_COPY.presentationModeEnter}
+                  ? UI_COPY.chefModeEmpty
+                  : UI_COPY.chefModeEnter}
               </Text>
             </View>
           </Pressable>
@@ -259,33 +263,36 @@ const styles = StyleSheet.create({
     fontSize: THEME.font.sizeBody,
     color: THEME.color.textSecondary,
   },
-  presentationButton: {
+  chefModeButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: THEME.space.md,
     borderRadius: THEME.radius.xl,
     paddingHorizontal: THEME.space.xl,
     paddingVertical: THEME.space.xl,
-    backgroundColor: THEME.color.accentStrong,
+    backgroundColor: THEME.color.chefModeCtaBackground,
+    borderWidth: 1,
+    borderColor: THEME.color.chefModeCtaBorder,
   },
-  presentationButtonPressed: {
+  chefModeButtonPressed: {
     opacity: 0.9,
   },
-  presentationButtonDisabled: {
+  chefModeButtonDisabled: {
     opacity: 0.5,
   },
-  presentationCopy: {
+  chefModeCopy: {
     flex: 1,
     gap: THEME.space.xs,
   },
-  presentationLabel: {
-    color: THEME.color.onPrimary,
+  chefModeLabel: {
+    color: THEME.color.chefModeCtaForeground,
     fontSize: THEME.font.sizeSm,
     fontWeight: THEME.font.weightBold,
   },
-  presentationValue: {
-    color: THEME.color.onPrimary,
+  chefModeValue: {
+    color: THEME.color.chefModeCtaForeground,
     fontSize: THEME.font.sizeXs,
+    opacity: 0.92,
   },
   sectionHeader: {
     flexDirection: "row",

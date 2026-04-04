@@ -4,7 +4,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { ChatBottomSheet } from "@/src/components/ChatBottomSheet";
 import { ConfirmDialog } from "@/src/components/ConfirmDialog";
 import { IngredientSwapModal } from "@/src/components/IngredientSwapModal";
-import { PresentationModeModal } from "@/src/components/PresentationModeModal";
+import { ChefModeModal } from "@/src/components/ChefModeModal";
 import { RecipeView } from "@/src/components/RecipeView";
 import { formatIngredientDeleteConfirmMessage, UI_COPY } from "@/src/constants/app";
 import { LOG_MESSAGES } from "@/src/constants/logMessages";
@@ -35,8 +35,8 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
   const [isLoadingSubstitutions, setIsLoadingSubstitutions] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [activeRecipe, setActiveRecipe] = useState<Recipe | undefined>(recipe);
-  const [isPresentationModeVisible, setIsPresentationModeVisible] = useState(false);
-  const [presentationStepIndex, setPresentationStepIndex] = useState(0);
+  const [isChefModeVisible, setIsChefModeVisible] = useState(false);
+  const [chefModeStepIndex, setChefModeStepIndex] = useState(0);
   const [ingredientDeleteConfirmName, setIngredientDeleteConfirmName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -169,16 +169,16 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
     [activeRecipe, closeSwapModal, isOnline, isSending]
   );
 
-  const openPresentationMode = useCallback(() => {
+  const openChefMode = useCallback(() => {
     if (!activeRecipe || activeRecipe.steps.length === 0) {
       return;
     }
-    setPresentationStepIndex(0);
-    setIsPresentationModeVisible(true);
+    setChefModeStepIndex(0);
+    setIsChefModeVisible(true);
   }, [activeRecipe]);
 
-  const closePresentationMode = useCallback(() => {
-    setIsPresentationModeVisible(false);
+  const closeChefMode = useCallback(() => {
+    setIsChefModeVisible(false);
   }, []);
 
   const handleIngredientRemoval = useCallback(
@@ -335,8 +335,8 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
     <View style={styles.container}>
       <RecipeView
         recipe={activeRecipe}
-        bottomInset={isPresentationModeVisible ? THEME.space.xxxl : THEME.layout.recipeEditorChatBottomInset}
-        onPresentationModePress={openPresentationMode}
+        bottomInset={isChefModeVisible ? THEME.space.xxxl : THEME.layout.recipeEditorChatBottomInset}
+        onChefModePress={openChefMode}
         onIngredientSwapPress={handleIngredientSwapPress}
         onIngredientRemovePress={handleIngredientRemovePress}
         ingredientsDisabled={isSending}
@@ -362,14 +362,14 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
         onCancel={closeIngredientDeleteDialog}
         onConfirm={confirmIngredientDelete}
       />
-      <PresentationModeModal
+      <ChefModeModal
         recipe={activeRecipe}
-        visible={isPresentationModeVisible}
-        currentStepIndex={presentationStepIndex}
-        onStepChange={setPresentationStepIndex}
-        onClose={closePresentationMode}
+        visible={isChefModeVisible}
+        currentStepIndex={chefModeStepIndex}
+        onStepChange={setChefModeStepIndex}
+        onClose={closeChefMode}
       />
-      {!isPresentationModeVisible ? (
+      {!isChefModeVisible ? (
         <ChatBottomSheet
           isOnline={isOnline}
           messages={messages}

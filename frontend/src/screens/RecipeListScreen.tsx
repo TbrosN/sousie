@@ -93,7 +93,7 @@ export function RecipeListScreen() {
         <Text style={styles.eyebrow}>Sousie Kitchen</Text>
         <Text style={styles.heroTitle}>Build and refine beautiful recipes.</Text>
         <Text style={styles.heroSubtitle}>
-          Create a recipe with AI, then open a card to replace ingredients, adjust the method, or cook in presentation mode.
+          Create a recipe with AI, then open a card to replace ingredients, adjust the method, or cook in chef mode.
         </Text>
 
         <View style={styles.promptWrap}>

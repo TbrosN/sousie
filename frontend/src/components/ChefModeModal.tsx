@@ -20,7 +20,7 @@ import {
 } from "react-native-safe-area-context";
 
 import {
-  formatPresentationProgress,
+  formatChefModeProgress,
   formatRecipeStepTitle,
   UI_COPY,
 } from "@/src/constants/app";
@@ -30,7 +30,7 @@ import { computeDisplayIngredient, formatQuantityWithUnit } from "@/src/utils/re
 
 import { GlassSurface } from "./GlassSurface";
 
-type PresentationModeModalProps = {
+type ChefModeModalProps = {
   recipe: Recipe;
   visible: boolean;
   currentStepIndex: number;
@@ -40,14 +40,14 @@ type PresentationModeModalProps = {
 
 const WINDOW_WIDTH = Dimensions.get("window").width;
 
-function PresentationModeModalBody({
+function ChefModeModalBody({
   recipe,
   visible,
   currentStepIndex,
   onStepChange,
   onClose,
   screenSize,
-}: PresentationModeModalProps & { screenSize: ScaledSize }) {
+}: ChefModeModalProps & { screenSize: ScaledSize }) {
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList<Recipe["steps"][number]>>(null);
   const totalSteps = recipe.steps.length;
@@ -69,14 +69,6 @@ function PresentationModeModalBody({
     }
   }
 
-  function goToStep(index: number): void {
-    const boundedIndex = Math.max(0, Math.min(index, totalSteps - 1));
-    listRef.current?.scrollToIndex({ index: boundedIndex, animated: true });
-    if (boundedIndex !== currentStepIndex) {
-      onStepChange(boundedIndex);
-    }
-  }
-
   return (
     <View
       style={[
@@ -84,22 +76,26 @@ function PresentationModeModalBody({
         {
           width: screenSize.width,
           height: screenSize.height,
-          backgroundColor: THEME.color.presentationBackdrop,
+          backgroundColor: THEME.color.chefModeBackdrop,
         },
       ]}
     >
       <View style={styles.container}>
         <View style={styles.chrome}>
-          <Pressable accessibilityRole="button" onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={20} color={THEME.color.textPrimary} />
-            <Text style={styles.closeText}>{UI_COPY.presentationModeClose}</Text>
-          </Pressable>
           <View style={styles.progressWrap}>
-            <Text style={styles.kicker}>{UI_COPY.presentationModeTitle}</Text>
+            <Text style={styles.kicker}>{UI_COPY.chefModeTitle}</Text>
             <Text style={styles.progressText}>
-              {formatPresentationProgress(currentStepIndex, totalSteps)}
+              {formatChefModeProgress(currentStepIndex, totalSteps)}
             </Text>
           </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={UI_COPY.chefModeClose}
+            onPress={onClose}
+            style={styles.closeButton}
+          >
+            <Ionicons name="close" size={22} color={THEME.color.textPrimary} />
+          </Pressable>
         </View>
 
         <FlatList
@@ -111,12 +107,11 @@ function PresentationModeModalBody({
           bounces={false}
           showsHorizontalScrollIndicator={false}
           onMomentumScrollEnd={handleMomentumScrollEnd}
-          keyExtractor={(_, index) => `presentation-step-${index}`}
+          keyExtractor={(_, index) => `chef-mode-step-${index}`}
           renderItem={({ item, index }) => (
             <View style={styles.page}>
               <GlassSurface style={styles.pageSurface} contentStyle={styles.pageSurfaceContent}>
                 <Text style={styles.pageEyebrow}>{formatRecipeStepTitle(index)}</Text>
-                <Text style={styles.instructions}>{item.instructions}</Text>
 
                 <View style={styles.ingredientsSection}>
                   <Text style={styles.ingredientsLabel}>{UI_COPY.recipeIngredientsSectionTitle}</Text>
@@ -136,6 +131,8 @@ function PresentationModeModalBody({
                     })
                   )}
                 </View>
+
+                <Text style={styles.instructions}>{item.instructions}</Text>
               </GlassSurface>
             </View>
           )}
@@ -152,50 +149,20 @@ function PresentationModeModalBody({
             { paddingBottom: THEME.space.xxxl * 2 + insets.bottom },
           ]}
         >
-          <Text style={styles.swipeHint}>{UI_COPY.presentationModeSwipeHint}</Text>
-          <View style={styles.controls}>
-            <Pressable
-              accessibilityRole="button"
-              disabled={currentStepIndex === 0}
-              onPress={() => goToStep(currentStepIndex - 1)}
-              style={[styles.navButton, currentStepIndex === 0 && styles.navButtonDisabled]}
-            >
-              <Ionicons name="chevron-back" size={18} color={THEME.color.textPrimary} />
-              <Text style={styles.navText}>{UI_COPY.presentationModePrevious}</Text>
-            </Pressable>
-
-            <Pressable
-              accessibilityRole="button"
-              onPress={() =>
-                currentStepIndex === totalSteps - 1 ? onClose() : goToStep(currentStepIndex + 1)
-              }
-              style={styles.navButtonPrimary}
-            >
-              <Text style={styles.navPrimaryText}>
-                {currentStepIndex === totalSteps - 1
-                  ? UI_COPY.presentationModeDone
-                  : UI_COPY.presentationModeNext}
-              </Text>
-              <Ionicons
-                name={currentStepIndex === totalSteps - 1 ? "checkmark" : "chevron-forward"}
-                size={18}
-                color={THEME.color.onPrimary}
-              />
-            </Pressable>
-          </View>
+          <Text style={styles.swipeHint}>{UI_COPY.chefModeSwipeHint}</Text>
         </View>
       </View>
     </View>
   );
 }
 
-export function PresentationModeModal({
+export function ChefModeModal({
   recipe,
   visible,
   currentStepIndex,
   onStepChange,
   onClose,
-}: PresentationModeModalProps) {
+}: ChefModeModalProps) {
   const [screenSize, setScreenSize] = useState(() => Dimensions.get("screen"));
 
   useEffect(() => {
@@ -216,7 +183,7 @@ export function PresentationModeModal({
       onRequestClose={onClose}
     >
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <PresentationModeModalBody
+        <ChefModeModalBody
           recipe={recipe}
           visible={visible}
           currentStepIndex={currentStepIndex}
@@ -242,16 +209,15 @@ const styles = StyleSheet.create({
   },
   chrome: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: THEME.space.xxxl,
     marginBottom: THEME.space.xl,
     gap: THEME.space.lg,
   },
   closeButton: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: THEME.space.sm,
+    justifyContent: "center",
     borderRadius: THEME.radius.pill,
     paddingHorizontal: THEME.space.lg,
     paddingVertical: THEME.space.md,
@@ -259,13 +225,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: THEME.color.borderDefault,
   },
-  closeText: {
-    color: THEME.color.textPrimary,
-    fontSize: THEME.font.sizeSm,
-    fontWeight: THEME.font.weightSemibold,
-  },
   progressWrap: {
-    alignItems: "flex-end",
+    flex: 1,
+    alignItems: "flex-start",
     gap: THEME.space.xs,
   },
   kicker: {
@@ -287,14 +249,14 @@ const styles = StyleSheet.create({
   },
   pageSurface: {
     width: "100%",
-    maxWidth: THEME.layout.presentationCardMaxWidth,
+    maxWidth: THEME.layout.chefModeCardMaxWidth,
     alignSelf: "center",
   },
   pageSurfaceContent: {
     minHeight: "70%",
     paddingHorizontal: THEME.space.xxxl * 2,
     paddingVertical: THEME.space.xxxl * 2,
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     gap: THEME.space.sectionGap,
   },
   pageEyebrow: {
@@ -348,52 +310,12 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: THEME.space.xxxl,
     paddingTop: THEME.space.xl,
-    gap: THEME.space.lg,
     flexShrink: 0,
-    backgroundColor: THEME.color.presentationBackdrop,
+    backgroundColor: THEME.color.chefModeBackdrop,
   },
   swipeHint: {
     color: THEME.color.textMuted,
     fontSize: THEME.font.sizeXs,
     textAlign: "center",
-  },
-  controls: {
-    flexDirection: "row",
-    gap: THEME.space.md,
-  },
-  navButton: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: THEME.space.sm,
-    borderRadius: THEME.radius.pill,
-    paddingVertical: THEME.space.lg,
-    backgroundColor: THEME.color.surfaceMuted,
-    borderWidth: 1,
-    borderColor: THEME.color.borderDefault,
-  },
-  navButtonDisabled: {
-    opacity: 0.45,
-  },
-  navText: {
-    color: THEME.color.textPrimary,
-    fontSize: THEME.font.sizeMd,
-    fontWeight: THEME.font.weightSemibold,
-  },
-  navButtonPrimary: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: THEME.space.sm,
-    borderRadius: THEME.radius.pill,
-    paddingVertical: THEME.space.lg,
-    backgroundColor: THEME.color.accentStrong,
-  },
-  navPrimaryText: {
-    color: THEME.color.onPrimary,
-    fontSize: THEME.font.sizeMd,
-    fontWeight: THEME.font.weightBold,
   },
 });

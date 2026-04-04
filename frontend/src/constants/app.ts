@@ -44,15 +44,12 @@ export const UI_COPY = {
   recipeIngredientLinePrefix: "- ",
   openRecipeLabel: "Open recipe",
   recipeCardHint: "Tap to open recipe",
-  presentationModeTitle: "Presentation Mode",
-  presentationModeSubtitle: "Focus on one step at a time",
-  presentationModeEnter: "Start cooking view",
-  presentationModeClose: "Close presentation mode",
-  presentationModePrevious: "Previous",
-  presentationModeNext: "Next",
-  presentationModeDone: "Done",
-  presentationModeSwipeHint: "Swipe left or right to move between steps.",
-  presentationModeEmpty: "This recipe needs at least one step before presentation mode can begin.",
+  chefModeTitle: "Chef mode",
+  chefModeSubtitle: "Focus on one step at a time",
+  chefModeEnter: "Start chef mode",
+  chefModeClose: "Close chef mode",
+  chefModeSwipeHint: "Swipe left or right to move between steps.",
+  chefModeEmpty: "This recipe needs at least one step before chef mode can begin.",
 } as const;
 
 export function formatDeleteRecipeConfirmMessage(recipeTitle: string): string {
@@ -79,7 +76,7 @@ export function formatTotalIngredientCount(count: number): string {
   return `${count} ${count === 1 ? "ingredient" : "ingredients"}`;
 }
 
-export function formatPresentationProgress(
+export function formatChefModeProgress(
   stepIndexZeroBased: number,
   totalSteps: number
 ): string {

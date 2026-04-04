@@ -39,8 +39,12 @@ export const THEME = {
     dimmingOverlay: "rgba(3, 6, 12, 0.72)",
     composerOverlaySurface: "rgba(9, 15, 24, 0.88)",
     scrim: "rgba(5, 7, 13, 0.92)",
-    /** Opaque fill for presentation mode — scrim RGB without alpha so nothing bleeds through underneath. */
-    presentationBackdrop: "#05070d",
+    /** Opaque fill for chef mode — scrim RGB without alpha so nothing bleeds through underneath. */
+    chefModeBackdrop: "#05070d",
+    /** Warm kitchen CTA for opening chef mode (distinct from cool blue accents). */
+    chefModeCtaBackground: "#8f5c38",
+    chefModeCtaForeground: "#fff8f2",
+    chefModeCtaBorder: "rgba(255, 232, 210, 0.35)",
     shadow: "rgba(0, 0, 0, 0.32)",
   },
   font: {
@@ -90,7 +94,7 @@ export const THEME = {
     messageAssistantMaxWidth: "95%" as const,
     trashIconSize: 22,
     heroMinHeight: 168,
-    presentationCardMaxWidth: 720,
+    chefModeCardMaxWidth: 720,
   },
   metrics: {
     expandedHeightRatio: 0.72,
