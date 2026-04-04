@@ -2,28 +2,51 @@ import { Platform } from "react-native";
 
 export const STORAGE_KEYS = {
   recipes: "sousie.recipes.v1",
+  /** Per-recipe chat transcripts: `${chatKeyPrefix}${recipeId}` */
+  chatKeyPrefix: "sousie.chat.v1:",
 } as const;
 
 export const UI_COPY = {
   offlineHint: "You're offline. Get back online to activate AI features.",
   aiInputPlaceholder: "Ask AI to modify this recipe...",
+  createRecipe: "Create Recipe",
+  createRecipeCreating: "Creating recipe…",
+  createRecipeAiFailed: "Could not generate that recipe. Check your connection and try again.",
+  createRecipePromptPlaceholder: "What do you want to cook? e.g. lentil soup",
   genericError: "Something went wrong. Please try again.",
   emptyRecipes: "No recipes yet. Create your first one.",
   chatUnavailable: "AI is currently unavailable. Try again shortly.",
+  chatSend: "Send",
+  chatSendingEllipsis: "...",
+  chatUserLabel: "You",
+  chatAssistantLabel: "Sousie",
+  invalidRecipeId: "Invalid recipe id.",
+  deleteRecipeAccessibilityPrefix: "Delete",
   deleteRecipeConfirmTitle: "Delete recipe?",
   deleteRecipeConfirmCancel: "Cancel",
   deleteRecipeConfirmDelete: "Delete",
+  servingsPrefix: "Servings:",
+  recipeTotalIngredientsTitle: "Total Ingredients",
+  recipeNoIngredientsYet: "No ingredients yet.",
+  recipeStepPrefix: "Step",
+  recipeIngredientLinePrefix: "- ",
 } as const;
 
 export function formatDeleteRecipeConfirmMessage(recipeTitle: string): string {
   return `Are you sure you want to delete "${recipeTitle}"? This cannot be undone.`;
 }
 
-export const UI_NUMBERS = {
-  collapsedInputBottomPadding: 12,
-  expandedHeightRatio: 0.72,
-  collapseSwipeThreshold: 48,
-} as const;
+export function formatDeleteRecipeAccessibilityLabel(recipeTitle: string): string {
+  return `${UI_COPY.deleteRecipeAccessibilityPrefix} ${recipeTitle}`;
+}
+
+export function formatRecipeServingsLine(numServings: number): string {
+  return `${UI_COPY.servingsPrefix} ${numServings}`;
+}
+
+export function formatRecipeStepTitle(stepIndexZeroBased: number): string {
+  return `${UI_COPY.recipeStepPrefix} ${stepIndexZeroBased + 1}`;
+}
 
 const apiBaseUrlFromEnv = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
 let apiBaseUrl: string;

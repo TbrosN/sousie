@@ -1,26 +1,74 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
-import { formatDeleteRecipeConfirmMessage, UI_COPY } from "@/src/constants/app";
+import { ErrorBanner } from "@/src/components/ErrorBanner";
+import {
+  formatDeleteRecipeAccessibilityLabel,
+  formatDeleteRecipeConfirmMessage,
+  formatRecipeServingsLine,
+  UI_COPY,
+} from "@/src/constants/app";
+import { LOG_MESSAGES } from "@/src/constants/logMessages";
+import { THEME } from "@/src/constants/theme";
 import { useRecipes } from "@/src/context/RecipesContext";
+import { useNetworkStatus } from "@/src/hooks/useNetworkStatus";
+import { BackendClient } from "@/src/services/backendClient";
+import { StorageService } from "@/src/services/storageService";
+import { ChatMessage } from "@/src/types/chat";
+import { buildId } from "@/src/utils/ids";
 import { logError } from "@/src/utils/logger";
-
-const TRASH_ICON_COLOR = "#dc2626";
 
 export function RecipeListScreen() {
   const router = useRouter();
-  const { recipes, isLoading, createRecipe, deleteRecipe } = useRecipes();
+  const isOnline = useNetworkStatus();
+  const { recipes, isLoading, createRecipe, updateRecipe, deleteRecipe } = useRecipes();
+  const [newRecipePrompt, setNewRecipePrompt] = useState("");
+  const [createBusy, setCreateBusy] = useState(false);
+  const [createError, setCreateError] = useState("");
+
+  const trimmedPrompt = newRecipePrompt.trim();
+  const canCreate = trimmedPrompt.length > 0 && isOnline && !createBusy;
 
   async function handleCreateRecipe(): Promise<void> {
+    if (!trimmedPrompt || !isOnline || createBusy) {
+      return;
+    }
+    setCreateError("");
+    setCreateBusy(true);
+    let createdId: string | undefined;
     try {
       const recipe = await createRecipe();
+      createdId = recipe.id;
+      const userMessage: ChatMessage = {
+        id: buildId("msg"),
+        role: "user",
+        content: trimmedPrompt,
+        createdAt: new Date().toISOString(),
+      };
+      const result = await BackendClient.sendChat(recipe, [userMessage], trimmedPrompt);
+      const assistantMessage: ChatMessage = {
+        id: buildId("msg"),
+        role: "assistant",
+        content: result.assistantMessage,
+        createdAt: new Date().toISOString(),
+      };
+      await updateRecipe(result.recipe);
+      await StorageService.writeChatMessages(recipe.id, [userMessage, assistantMessage]);
+      setNewRecipePrompt("");
       router.push({
         pathname: "/recipes/[recipeId]",
         params: { recipeId: recipe.id },
       });
     } catch (error) {
-      logError("Failed to create recipe.", error);
+      logError(LOG_MESSAGES.createRecipeAiTurnFailed, error);
+      setCreateError(UI_COPY.createRecipeAiFailed);
+      if (createdId) {
+        await deleteRecipe(createdId);
+      }
+    } finally {
+      setCreateBusy(false);
     }
   }
 
@@ -34,9 +82,34 @@ export function RecipeListScreen() {
 
   return (
     <View style={styles.container}>
-      <Pressable accessibilityRole="button" onPress={handleCreateRecipe} style={styles.createButton}>
-        <Text style={styles.createButtonText}>Create Recipe</Text>
+      <TextInput
+        accessibilityLabel={UI_COPY.createRecipePromptPlaceholder}
+        editable={!isLoading && !createBusy}
+        onChangeText={setNewRecipePrompt}
+        placeholder={UI_COPY.createRecipePromptPlaceholder}
+        style={styles.promptInput}
+        value={newRecipePrompt}
+      />
+      <ErrorBanner message={createError} />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !canCreate }}
+        disabled={!canCreate}
+        onPress={() => {
+          void handleCreateRecipe();
+        }}
+        style={[styles.createButton, !canCreate && styles.createButtonDisabled]}
+      >
+        {createBusy ? (
+          <View style={styles.createButtonBusy}>
+            <ActivityIndicator color={THEME.color.onPrimary} />
+            <Text style={styles.createButtonText}>{UI_COPY.createRecipeCreating}</Text>
+          </View>
+        ) : (
+          <Text style={styles.createButtonText}>{UI_COPY.createRecipe}</Text>
+        )}
       </Pressable>
+      {!isOnline ? <Text style={styles.offlineNote}>{UI_COPY.offlineHint}</Text> : null}
 
       {recipes.length === 0 ? (
         <Text style={styles.emptyText}>{UI_COPY.emptyRecipes}</Text>
@@ -54,12 +127,12 @@ export function RecipeListScreen() {
               style={styles.recipeCardMain}
             >
               <Text style={styles.recipeTitle}>{recipe.title}</Text>
-              <Text style={styles.recipeSubtitle}>Servings: {recipe.numServings}</Text>
+              <Text style={styles.recipeSubtitle}>{formatRecipeServingsLine(recipe.numServings)}</Text>
             </Pressable>
             <Pressable
-              accessibilityLabel={`Delete ${recipe.title}`}
+              accessibilityLabel={formatDeleteRecipeAccessibilityLabel(recipe.title)}
               accessibilityRole="button"
-              hitSlop={12}
+              hitSlop={THEME.space.hitSlop}
               onPress={() => {
                 Alert.alert(
                   UI_COPY.deleteRecipeConfirmTitle,
@@ -78,7 +151,11 @@ export function RecipeListScreen() {
               }}
               style={styles.deleteButton}
             >
-              <Ionicons name="trash-outline" size={22} color={TRASH_ICON_COLOR} />
+              <Ionicons
+                name="trash-outline"
+                size={THEME.layout.trashIconSize}
+                color={THEME.color.destructive}
+              />
             </Pressable>
           </View>
         ))
@@ -90,57 +167,81 @@ export function RecipeListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: "#f8fafc",
-    gap: 10,
+    padding: THEME.space.xxxl,
+    backgroundColor: THEME.color.backgroundApp,
+    gap: THEME.space.lg,
   },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
+  promptInput: {
+    borderWidth: 1,
+    borderColor: THEME.color.borderMuted,
+    borderRadius: THEME.radius.md,
+    paddingHorizontal: THEME.space.xl,
+    paddingVertical: THEME.space.lg,
+    fontSize: THEME.font.sizeBody,
+    backgroundColor: THEME.color.surface,
+    color: THEME.color.textPrimary,
+  },
   createButton: {
-    backgroundColor: "#0284c7",
-    borderRadius: 10,
-    paddingVertical: 12,
+    backgroundColor: THEME.color.primaryButton,
+    borderRadius: THEME.radius.md,
+    paddingVertical: THEME.space.xl,
     alignItems: "center",
+    minHeight: THEME.space.inputMinHeight + THEME.space.xl * 2,
+    justifyContent: "center",
+  },
+  createButtonBusy: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: THEME.space.md,
+  },
+  createButtonDisabled: {
+    backgroundColor: THEME.color.controlDisabled,
   },
   createButtonText: {
-    color: "#ffffff",
-    fontWeight: "700",
-    fontSize: 15,
+    color: THEME.color.onPrimary,
+    fontWeight: THEME.font.weightBold,
+    fontSize: THEME.font.sizeMd,
+  },
+  offlineNote: {
+    color: THEME.color.offlineText,
+    fontSize: THEME.font.size2xs,
   },
   recipeCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingLeft: 12,
-    paddingRight: 4,
+    backgroundColor: THEME.color.surface,
+    borderRadius: THEME.radius.lg,
+    paddingVertical: THEME.space.md,
+    paddingLeft: THEME.space.xl,
+    paddingRight: THEME.space.xs,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: THEME.color.borderDefault,
   },
   recipeCardMain: {
     flex: 1,
-    paddingVertical: 4,
-    paddingRight: 8,
+    paddingVertical: THEME.space.xs,
+    paddingRight: THEME.space.md,
   },
   deleteButton: {
-    padding: 10,
+    padding: THEME.space.lg,
     justifyContent: "center",
     alignItems: "center",
   },
   recipeTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#111827",
+    fontSize: THEME.font.sizeLg,
+    fontWeight: THEME.font.weightSemibold,
+    color: THEME.color.textPrimary,
   },
   recipeSubtitle: {
-    marginTop: 4,
-    color: "#4b5563",
+    marginTop: THEME.space.xs,
+    color: THEME.color.textSecondary,
   },
   emptyText: {
-    color: "#6b7280",
+    color: THEME.color.textMuted,
   },
 });

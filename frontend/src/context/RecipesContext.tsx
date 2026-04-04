@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 
+import { LOG_MESSAGES } from "@/src/constants/logMessages";
 import { StorageService } from "@/src/services/storageService";
 import { Recipe, RecipeFactory } from "@/src/types/recipe";
 import { buildId } from "@/src/utils/ids";
@@ -37,7 +38,7 @@ export function RecipesProvider({ children }: PropsWithChildren) {
       const stored = await StorageService.readRecipes();
       setRecipes(stored);
     } catch (error) {
-      logError("Failed to load recipes from storage.", error);
+      logError(LOG_MESSAGES.loadRecipesFailed, error);
       setRecipes([]);
     } finally {
       setIsLoading(false);
@@ -49,7 +50,7 @@ export function RecipesProvider({ children }: PropsWithChildren) {
     setRecipes((previous) => {
       const nextRecipes = [newRecipe, ...previous];
       void StorageService.writeRecipes(nextRecipes).catch((error) => {
-        logError("Failed to persist newly created recipe.", error);
+        logError(LOG_MESSAGES.persistNewRecipeFailed, error);
       });
       return nextRecipes;
     });
@@ -63,7 +64,7 @@ export function RecipesProvider({ children }: PropsWithChildren) {
         entry.id === updatedRecipe.id ? updatedRecipe : entry
       );
       void StorageService.writeRecipes(nextRecipes).catch((error) => {
-        logError("Failed to persist updated recipe.", error);
+        logError(LOG_MESSAGES.persistRecipeUpdateFailed, error);
       });
       return nextRecipes;
     });
@@ -73,7 +74,10 @@ export function RecipesProvider({ children }: PropsWithChildren) {
     setRecipes((previous) => {
       const nextRecipes = previous.filter((entry) => entry.id !== id);
       void StorageService.writeRecipes(nextRecipes).catch((error) => {
-        logError("Failed to persist recipe deletion.", error);
+        logError(LOG_MESSAGES.persistRecipeDeleteFailed, error);
+      });
+      void StorageService.deleteChatMessages(id).catch((error) => {
+        logError(LOG_MESSAGES.deleteChatFailed, error);
       });
       return nextRecipes;
     });

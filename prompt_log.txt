@@ -567,3 +567,15 @@ Let's add a feature to delete recipes. There should be a little red trash outlin
 yes, let's remove the default recipe. It should start out empty, that initialize stuff was just for debugging and can be cleaned
 
 let's add an "are you sure" dialog before the delete to prevent accidents
+
+@SPEC.md:171-179 please ensure you are following these 
+
+why do we need initialChatDedupe here? Couldn't we just pass the chat message as a prop to the recipeeditorscreen? or use context perhaps?
+
+I mean we could send that first chat message to the backend and get the initial recipe while still on the recipe list screen. Then, we can send those as props or context to the recipe editor screen.
+
+Definitely need a loading state for UX yes. If the first call fails, the app is broken, this should just be an error msg to the user. But as for the context thing, how would that work? User has potentially many recipes. We could have like an initialrecipe context that always holds just the initial message for the last-created recipe? Or is there a cleaner way to do this? One consideration is that we are already planning on saving chat history, say in async storage.
+
+ok yeah lets start saving chats in async storage. then, on "create recipe", we just create the recipe entry in async storage and populate the first message + response. We can then easily reference this in the editor screen, simplifying our code and eliminating the special casing.
+
+I created a new recipe and the title of the recipe was autofilled in the editor, but there were NO steps or ingredients. Can we add some logging to the backend, say a debug log of the model output so we can see if it's outputting a recipe thats just not getting displayed right on the FE?

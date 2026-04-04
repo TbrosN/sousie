@@ -1,5 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { formatRecipeServingsLine, formatRecipeStepTitle, UI_COPY } from "@/src/constants/app";
+import { THEME } from "@/src/constants/theme";
 import { Recipe } from "@/src/types/recipe";
 import {
   computeDisplayIngredient,
@@ -18,12 +20,12 @@ export function RecipeView({ recipe, bottomInset }: RecipeViewProps) {
   return (
     <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomInset }]}>
       <Text style={styles.title}>{recipe.title}</Text>
-      <Text style={styles.subtitle}>Servings: {recipe.numServings}</Text>
+      <Text style={styles.subtitle}>{formatRecipeServingsLine(recipe.numServings)}</Text>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Total Ingredients</Text>
+        <Text style={styles.cardTitle}>{UI_COPY.recipeTotalIngredientsTitle}</Text>
         {totals.length === 0 ? (
-          <Text style={styles.muted}>No ingredients yet.</Text>
+          <Text style={styles.muted}>{UI_COPY.recipeNoIngredientsYet}</Text>
         ) : (
           totals.map((ingredient) => (
             <Text key={`${ingredient.name}-${ingredient.unit}`} style={styles.bodyText}>
@@ -35,14 +37,15 @@ export function RecipeView({ recipe, bottomInset }: RecipeViewProps) {
 
       {recipe.steps.map((step, index) => (
         <View key={`step-${index}`} style={styles.card}>
-          <Text style={styles.cardTitle}>Step {index + 1}</Text>
+          <Text style={styles.cardTitle}>{formatRecipeStepTitle(index)}</Text>
           <Text style={styles.bodyText}>{step.instructions}</Text>
           <View style={styles.ingredientsBlock}>
             {step.ingredients.map((ingredient, ingredientIndex) => {
               const display = computeDisplayIngredient(ingredient, recipe.numServings);
               return (
                 <Text key={`${ingredient.name}-${ingredientIndex}`} style={styles.ingredientText}>
-                  - {ingredient.name}: {formatQuantity(display.displayQuantity)} {display.unit}
+                  {UI_COPY.recipeIngredientLinePrefix}
+                  {ingredient.name}: {formatQuantity(display.displayQuantity)} {display.unit}
                 </Text>
               );
             })}
@@ -55,42 +58,42 @@ export function RecipeView({ recipe, bottomInset }: RecipeViewProps) {
 
 const styles = StyleSheet.create({
   content: {
-    padding: 16,
-    gap: 12,
+    padding: THEME.space.xxxl,
+    gap: THEME.space.xl,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "700",
+    fontSize: THEME.font.sizeHero,
+    fontWeight: THEME.font.weightBold,
   },
   subtitle: {
-    fontSize: 16,
-    color: "#4b5563",
+    fontSize: THEME.font.sizeBody,
+    color: THEME.color.textSecondary,
   },
   card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
+    backgroundColor: THEME.color.surface,
+    borderRadius: THEME.radius.lg,
+    padding: THEME.space.xl,
+    gap: THEME.space.md,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: THEME.color.borderDefault,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: THEME.font.sizeTitle,
+    fontWeight: THEME.font.weightSemibold,
   },
   bodyText: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: "#111827",
+    fontSize: THEME.font.sizeMd,
+    lineHeight: THEME.font.lineHeightBody,
+    color: THEME.color.textPrimary,
   },
   ingredientText: {
-    fontSize: 14,
-    color: "#374151",
+    fontSize: THEME.font.sizeSm,
+    color: THEME.color.textBody,
   },
   ingredientsBlock: {
-    gap: 4,
+    gap: THEME.space.xs,
   },
   muted: {
-    color: "#6b7280",
+    color: THEME.color.textMuted,
   },
 });

@@ -1,5 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { UI_COPY } from "@/src/constants/app";
+import { THEME } from "@/src/constants/theme";
 import { ChatMessage } from "@/src/types/chat";
 
 type ChatMessageListProps = {
@@ -18,7 +20,7 @@ export function ChatMessageList({ messages }: ChatMessageListProps) {
           ]}
         >
           <Text style={styles.roleText}>
-            {message.role === "user" ? "You" : "Sousie"}
+            {message.role === "user" ? UI_COPY.chatUserLabel : UI_COPY.chatAssistantLabel}
           </Text>
           <Text style={styles.messageText}>{message.content}</Text>
         </View>
@@ -32,32 +34,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    gap: 10,
-    paddingBottom: 12,
+    gap: THEME.space.lg,
+    paddingBottom: THEME.space.xl,
   },
   bubble: {
-    borderRadius: 12,
-    padding: 10,
-    gap: 6,
+    borderRadius: THEME.radius.lg,
+    padding: THEME.space.lg,
+    gap: THEME.space.sm,
   },
   userBubble: {
-    backgroundColor: "#e0f2fe",
+    backgroundColor: THEME.color.messageUserBg,
     alignSelf: "flex-end",
-    maxWidth: "85%",
+    maxWidth: THEME.layout.messageUserMaxWidth,
   },
   assistantBubble: {
-    backgroundColor: "#f3f4f6",
+    backgroundColor: THEME.color.messageAssistantBg,
     alignSelf: "flex-start",
-    maxWidth: "95%",
+    maxWidth: THEME.layout.messageAssistantMaxWidth,
   },
   roleText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#1f2937",
+    fontSize: THEME.font.size2xs,
+    fontWeight: THEME.font.weightSemibold,
+    color: THEME.color.textStrong,
   },
   messageText: {
-    fontSize: 14,
-    color: "#111827",
-    lineHeight: 20,
+    fontSize: THEME.font.sizeSm,
+    color: THEME.color.textPrimary,
+    lineHeight: THEME.font.lineHeightMessage,
   },
 });

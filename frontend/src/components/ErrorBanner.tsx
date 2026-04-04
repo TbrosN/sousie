@@ -1,5 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 
+import { THEME } from "@/src/constants/theme";
+
 type ErrorBannerProps = {
   message: string;
 };
@@ -17,15 +19,15 @@ export function ErrorBanner({ message }: ErrorBannerProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#fef2f2",
-    borderColor: "#fecaca",
+    backgroundColor: THEME.color.errorSurface,
+    borderColor: THEME.color.errorBorder,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    borderRadius: THEME.radius.md,
+    paddingVertical: THEME.space.md,
+    paddingHorizontal: THEME.space.lg,
   },
   text: {
-    color: "#991b1b",
-    fontSize: 13,
+    color: THEME.color.errorText,
+    fontSize: THEME.font.sizeXs,
   },
 });

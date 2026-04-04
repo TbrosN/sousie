@@ -12,7 +12,8 @@ import {
   View,
 } from "react-native";
 
-import { UI_COPY, UI_NUMBERS } from "@/src/constants/app";
+import { UI_COPY } from "@/src/constants/app";
+import { THEME } from "@/src/constants/theme";
 import { ChatMessage } from "@/src/types/chat";
 
 import { ChatMessageList } from "./ChatMessageList";
@@ -59,11 +60,11 @@ export function ChatBottomSheet({
         onMoveShouldSetPanResponder: (_, gestureState) =>
           Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
         onPanResponderRelease: (_, gestureState) => {
-          if (gestureState.dy > UI_NUMBERS.collapseSwipeThreshold) {
+          if (gestureState.dy > THEME.metrics.collapseSwipeThreshold) {
             setIsExpanded(false);
             Keyboard.dismiss();
           }
-          if (gestureState.dy < -UI_NUMBERS.collapseSwipeThreshold) {
+          if (gestureState.dy < -THEME.metrics.collapseSwipeThreshold) {
             setIsExpanded(true);
           }
         },
@@ -86,7 +87,7 @@ export function ChatBottomSheet({
           style={[
             styles.sheet,
             isExpanded
-              ? { height: `${UI_NUMBERS.expandedHeightRatio * 100}%` }
+              ? { height: `${THEME.metrics.expandedHeightRatio * 100}%` }
               : styles.sheetCollapsed,
           ]}
         >
@@ -118,7 +119,9 @@ export function ChatBottomSheet({
                 disabled={sendDisabled}
                 style={[styles.sendButton, sendDisabled && styles.sendButtonDisabled]}
               >
-                <Text style={styles.sendButtonText}>{isSending ? "..." : "Send"}</Text>
+                <Text style={styles.sendButtonText}>
+                  {isSending ? UI_COPY.chatSendingEllipsis : UI_COPY.chatSend}
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -131,78 +134,78 @@ export function ChatBottomSheet({
 const styles = StyleSheet.create({
   dimBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(17, 24, 39, 0.35)",
+    backgroundColor: THEME.color.dimmingOverlay,
   },
   sheetContainer: {
     flex: 1,
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: "#ffffff",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 12,
-    paddingTop: 8,
+    backgroundColor: THEME.color.surface,
+    borderTopLeftRadius: THEME.radius.sheetTop,
+    borderTopRightRadius: THEME.radius.sheetTop,
+    paddingHorizontal: THEME.space.xl,
+    paddingTop: THEME.space.md,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: THEME.color.borderDefault,
   },
   sheetCollapsed: {
-    paddingBottom: UI_NUMBERS.collapsedInputBottomPadding,
+    paddingBottom: THEME.metrics.collapsedInputBottomPadding,
   },
   handleArea: {
     alignItems: "center",
-    paddingVertical: 6,
+    paddingVertical: THEME.space.sm,
   },
   handle: {
-    width: 48,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: "#d1d5db",
+    width: THEME.space.sheetHandleWidth,
+    height: THEME.space.sheetHandleHeight,
+    borderRadius: THEME.radius.pill,
+    backgroundColor: THEME.color.sheetHandle,
   },
   offlineHint: {
-    color: "#92400e",
-    backgroundColor: "#fef3c7",
+    color: THEME.color.offlineText,
+    backgroundColor: THEME.color.offlineBg,
     borderWidth: 1,
-    borderColor: "#fcd34d",
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    marginBottom: 8,
-    fontSize: 12,
+    borderColor: THEME.color.offlineBorder,
+    borderRadius: THEME.radius.sm,
+    paddingVertical: THEME.space.sm,
+    paddingHorizontal: THEME.space.md,
+    marginBottom: THEME.space.md,
+    fontSize: THEME.font.size2xs,
   },
   inputContainer: {
-    gap: 8,
-    paddingBottom: 10,
+    gap: THEME.space.md,
+    paddingBottom: THEME.space.lg,
   },
   inputRow: {
     flexDirection: "row",
-    gap: 8,
+    gap: THEME.space.md,
     alignItems: "flex-end",
   },
   input: {
     flex: 1,
-    minHeight: 42,
-    maxHeight: 120,
+    minHeight: THEME.space.inputMinHeight,
+    maxHeight: THEME.space.inputMaxHeight,
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: "#ffffff",
+    borderColor: THEME.color.borderMuted,
+    borderRadius: THEME.radius.md,
+    paddingHorizontal: THEME.space.lg,
+    paddingVertical: THEME.space.md,
+    backgroundColor: THEME.color.surface,
   },
   sendButton: {
-    height: 42,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: "#0ea5e9",
+    height: THEME.space.inputMinHeight,
+    paddingHorizontal: THEME.space.xxl,
+    borderRadius: THEME.radius.md,
+    backgroundColor: THEME.color.primaryAction,
     justifyContent: "center",
     alignItems: "center",
   },
   sendButtonDisabled: {
-    backgroundColor: "#94a3b8",
+    backgroundColor: THEME.color.controlDisabled,
   },
   sendButtonText: {
-    color: "#ffffff",
-    fontWeight: "600",
+    color: THEME.color.onPrimary,
+    fontWeight: THEME.font.weightSemibold,
   },
 });
