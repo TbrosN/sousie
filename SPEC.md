@@ -6,8 +6,8 @@ This is a mobile app targeting Android that uses AI to help people create and ed
 
 ## App Structure
 
-- Frontend (sousie/frontend): Expo Android native app
-- Backend (sousie/backend): FastAPI python server
+- Frontend (sousie/frontend): Expo Android native app. Handles the frontend screens and components.
+- Backend (sousie/backend): FastAPI python server. This handles all LLM-related logic and API calls.
 
 ## Core Features
 

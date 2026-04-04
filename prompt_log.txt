@@ -526,3 +526,14 @@ couple of things: I want to store the recipe such that I can very easily scale a
 ok this looks good, again let's write this up concisely as something I can paste into my spec
 
 some updates: let's use langchain for the tools. And steps need to contain a list of ingredients that are involved in that step. Within a step, we might be using only some of the ingredient needed for the entire recipe, so we should also store a quantity within this ingredient of the step. Rather than a step id, let's simply use the ordering of the steps as the source of truth; it's already stored as a list, and its implicit that the first step in the list is supposed to be done first, etc.
+
+Read @SPEC.md  in this project. Implement the full mobile app exactly as specified. 
+Create all necessary files, components, and navigation. Make sure that appropriate data is persistent. 
+Avoid security risks for sensitive data.  Include proper error handling. 
+Make sure the app starts/builds without errors. Follow all style guidelines from the SPEC.
+
+Read @SPEC.md  in this project. Implement the full mobile app and fast api backend exactly as specified. Create all necessary files, components, and navigation. Make sure that appropriate data is persistent. Avoid security risks for sensitive data.  Include proper error handling. Make sure the app starts/builds without errors. Follow all style guidelines from the SPEC. You MUST implement both the frontend and the backend, following the division of labor laid out in the SPEC.
+
+wait, make sure you set this up to use Gemini for the llm, not open ai. So you should expect GEMINI_API_KEY
+
+wait lets switch to uv not pip for the packages sorry
