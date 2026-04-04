@@ -700,3 +700,8 @@ To open chef mode, let's make a little chef hat icon on the button, and rebranch
 tall steps are getting cut off. Let's put a max height on the step card and make it scrollable if exceeded
 
 ingredients should also be collapsible in chef mode.
+
+Take a look at my app. It's an AI recipe designer. The thing is, everyone has their own dietary preferences: some are diabetic, some have allergies, some are on a diet, etc. I want to add a feature where we can have persistent user-wide information about their diet that is passed as context to every new recipe. Help me design a high-level idea for this. One apporach would be something like cursor rules, where the user can add some text-form rules that act like prompts. Another idea is some kind of onboarding flow, where we ask questions and then turn that into a prompt that is then used like a cursor rule. Personally, I follow a certain diet: there are foods that I typically buy and that I like to use, there are foods/ingredients that I completely avoid, and there are foods that I am okay with eating on occassion, but want to mostly avoid.
+
+This looks pretty good, let's implement this. One important addition here that might not be obvious though:
+I want users to be able to attach images to their preferences too. Because some users like me follow a diet that has a nice food chart diagram explaining it.

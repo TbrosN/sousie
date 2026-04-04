@@ -2,11 +2,6 @@
 
 Sousie is a mobile MVP for recipe editing with an AI assistant.
 
-## TODO
-- Make LLM order the steps optimially for parallel cooking
-    - consider multiple cooks and cleaning of dishes
-- Make a "present mode" for the steps so its easier to follow when cooking
-
 ## Project Layout
 
 - `frontend`: Expo app (Android, iOS, Web)
@@ -21,7 +16,7 @@ cd backend
 uv sync
 ```
 
-1. Configure environment:
+2. Configure environment:
 
 ```bash
 cp .env.example .env
@@ -29,10 +24,10 @@ cp .env.example .env
 
 Set `GEMINI_API_KEY` in `backend/.env`.
 
-1. Run the API:
+3. Run the API:
 
 ```bash
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uv run -m app.main
 ```
 
 ## Frontend Setup
@@ -49,19 +44,6 @@ For web:
 npm run web
 ```
 
-## Verification Commands
-
-- Frontend lint and type-check:
-
-```bash
-cd frontend
-npm run lint
-npx tsc --noEmit
-```
-
-- Backend compile/import:
-
-```bash
-cd backend
-uv run -m app.main
-```
+## Upcoming features
+- Make LLM order the steps optimially for parallel cooking
+    - consider multiple cooks and dish-washing too!
