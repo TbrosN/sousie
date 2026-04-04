@@ -1,7 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { formatRecipeServingsLine, formatRecipeStepTitle, UI_COPY } from "@/src/constants/app";
+import {
+  formatRecipeServingsLine,
+  formatRecipeStepTitle,
+  formatTotalIngredientCount,
+  UI_COPY,
+} from "@/src/constants/app";
 import { THEME } from "@/src/constants/theme";
 import { Recipe } from "@/src/types/recipe";
 import {
@@ -30,6 +36,11 @@ export function RecipeView({
   ingredientsDisabled = false,
 }: RecipeViewProps) {
   const totals = computeIngredientTotals(recipe);
+  const [ingredientsExpanded, setIngredientsExpanded] = useState(true);
+
+  useEffect(() => {
+    setIngredientsExpanded(true);
+  }, [recipe.id]);
 
   return (
     <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomInset }]}>
@@ -69,74 +80,109 @@ export function RecipeView({
       </View>
 
       <GlassSurface contentStyle={styles.sectionCard}>
-        <Text style={styles.cardTitle}>{UI_COPY.recipeTotalIngredientsTitle}</Text>
         {totals.length === 0 ? (
-          <Text style={styles.muted}>{UI_COPY.recipeNoIngredientsYet}</Text>
+          <>
+            <Text style={styles.cardTitle}>{UI_COPY.recipeTotalIngredientsTitle}</Text>
+            <Text style={styles.muted}>{UI_COPY.recipeNoIngredientsYet}</Text>
+          </>
         ) : (
-          <View style={styles.ingredientsGrid}>
-            {totals.map((ingredient) => {
-              const swapDisabled =
-                !onIngredientSwapPress || ingredientsDisabled;
-              const removeDisabled =
-                !onIngredientRemovePress || ingredientsDisabled;
-              return (
-                <View
-                  key={`${ingredient.name}-${ingredient.unit}`}
-                  style={[
-                    styles.ingredientRow,
-                    ingredientsDisabled ? styles.ingredientRowDisabled : null,
-                  ]}
-                >
-                  <View style={styles.ingredientCopy}>
-                    <Text style={styles.ingredientName}>{ingredient.name}</Text>
-                    <Text style={styles.ingredientValue}>
-                      {formatQuantityWithUnit(ingredient.totalQuantity, ingredient.unit)}
-                    </Text>
-                  </View>
-                  <View style={styles.ingredientActions}>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`Swap ${ingredient.name}`}
-                      disabled={swapDisabled}
-                      hitSlop={THEME.space.hitSlop}
-                      onPress={() => onIngredientSwapPress?.(ingredient.name)}
-                      style={({ pressed }) => [
-                        styles.ingredientIconButton,
-                        pressed && !swapDisabled ? styles.ingredientIconButtonPressed : null,
+          <>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded: ingredientsExpanded }}
+              accessibilityLabel={
+                ingredientsExpanded
+                  ? UI_COPY.ingredientsListCollapseA11y
+                  : UI_COPY.ingredientsListExpandA11y
+              }
+              hitSlop={THEME.space.hitSlop}
+              onPress={() => setIngredientsExpanded((v) => !v)}
+              style={({ pressed }) => [
+                styles.ingredientsCardHeader,
+                pressed ? styles.ingredientsCardHeaderPressed : null,
+              ]}
+            >
+              <View style={styles.ingredientsCardHeaderText}>
+                <Text style={styles.cardTitle}>{UI_COPY.recipeTotalIngredientsTitle}</Text>
+                {!ingredientsExpanded ? (
+                  <Text style={styles.ingredientsCollapsedSummary}>
+                    {formatTotalIngredientCount(totals.length)}
+                  </Text>
+                ) : null}
+              </View>
+              <Ionicons
+                name={ingredientsExpanded ? "chevron-up" : "chevron-down"}
+                size={22}
+                color={THEME.color.textMuted}
+              />
+            </Pressable>
+            {ingredientsExpanded ? (
+              <View style={styles.ingredientsGrid}>
+                {totals.map((ingredient) => {
+                  const swapDisabled =
+                    !onIngredientSwapPress || ingredientsDisabled;
+                  const removeDisabled =
+                    !onIngredientRemovePress || ingredientsDisabled;
+                  return (
+                    <View
+                      key={`${ingredient.name}-${ingredient.unit}`}
+                      style={[
+                        styles.ingredientRow,
+                        ingredientsDisabled ? styles.ingredientRowDisabled : null,
                       ]}
                     >
-                      <Ionicons
-                        name="swap-horizontal-outline"
-                        size={20}
-                        color={
-                          swapDisabled ? THEME.color.controlDisabled : THEME.color.textMuted
-                        }
-                      />
-                    </Pressable>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`Remove ${ingredient.name}`}
-                      disabled={removeDisabled}
-                      hitSlop={THEME.space.hitSlop}
-                      onPress={() => onIngredientRemovePress?.(ingredient.name)}
-                      style={({ pressed }) => [
-                        styles.ingredientIconButton,
-                        pressed && !removeDisabled ? styles.ingredientIconButtonPressed : null,
-                      ]}
-                    >
-                      <Ionicons
-                        name="trash-outline"
-                        size={20}
-                        color={
-                          removeDisabled ? THEME.color.controlDisabled : THEME.color.destructive
-                        }
-                      />
-                    </Pressable>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
+                      <View style={styles.ingredientCopy}>
+                        <Text style={styles.ingredientName}>{ingredient.name}</Text>
+                        <Text style={styles.ingredientValue}>
+                          {formatQuantityWithUnit(ingredient.totalQuantity, ingredient.unit)}
+                        </Text>
+                      </View>
+                      <View style={styles.ingredientActions}>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Swap ${ingredient.name}`}
+                          disabled={swapDisabled}
+                          hitSlop={THEME.space.hitSlop}
+                          onPress={() => onIngredientSwapPress?.(ingredient.name)}
+                          style={({ pressed }) => [
+                            styles.ingredientIconButton,
+                            pressed && !swapDisabled ? styles.ingredientIconButtonPressed : null,
+                          ]}
+                        >
+                          <Ionicons
+                            name="swap-horizontal-outline"
+                            size={20}
+                            color={
+                              swapDisabled ? THEME.color.controlDisabled : THEME.color.textMuted
+                            }
+                          />
+                        </Pressable>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Remove ${ingredient.name}`}
+                          disabled={removeDisabled}
+                          hitSlop={THEME.space.hitSlop}
+                          onPress={() => onIngredientRemovePress?.(ingredient.name)}
+                          style={({ pressed }) => [
+                            styles.ingredientIconButton,
+                            pressed && !removeDisabled ? styles.ingredientIconButtonPressed : null,
+                          ]}
+                        >
+                          <Ionicons
+                            name="trash-outline"
+                            size={20}
+                            color={
+                              removeDisabled ? THEME.color.controlDisabled : THEME.color.destructive
+                            }
+                          />
+                        </Pressable>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : null}
+          </>
         )}
       </GlassSurface>
 
@@ -259,6 +305,28 @@ const styles = StyleSheet.create({
   sectionCard: {
     padding: THEME.space.xxxl,
     gap: THEME.space.lg,
+  },
+  ingredientsCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: THEME.space.md,
+    marginHorizontal: -THEME.space.sm,
+    marginVertical: -THEME.space.xs,
+    paddingHorizontal: THEME.space.sm,
+    paddingVertical: THEME.space.xs,
+    borderRadius: THEME.radius.md,
+  },
+  ingredientsCardHeaderPressed: {
+    opacity: 0.85,
+  },
+  ingredientsCardHeaderText: {
+    flex: 1,
+    gap: THEME.space.xs,
+  },
+  ingredientsCollapsedSummary: {
+    fontSize: THEME.font.sizeSm,
+    color: THEME.color.textMuted,
   },
   cardTitle: {
     fontSize: THEME.font.sizeBody,

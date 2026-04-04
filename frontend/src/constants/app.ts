@@ -33,10 +33,12 @@ export const UI_COPY = {
   deleteRecipeConfirmCancel: "Cancel",
   deleteRecipeConfirmDelete: "Delete",
   servingsPrefix: "Servings:",
-  recipeTotalIngredientsTitle: "Total Ingredients",
+  recipeTotalIngredientsTitle: "All Ingredients",
   recipeIngredientsSectionTitle: "Ingredients",
   recipeStepsSectionTitle: "Method",
   recipeNoIngredientsYet: "No ingredients yet.",
+  ingredientsListExpandA11y: "Expand ingredients list",
+  ingredientsListCollapseA11y: "Collapse ingredients list",
   recipeStepPrefix: "Step",
   recipeIngredientLinePrefix: "- ",
   openRecipeLabel: "Open recipe",
@@ -70,6 +72,10 @@ export function formatRecipeServingsLine(numServings: number): string {
 
 export function formatRecipeStepTitle(stepIndexZeroBased: number): string {
   return `${UI_COPY.recipeStepPrefix} ${stepIndexZeroBased + 1}`;
+}
+
+export function formatTotalIngredientCount(count: number): string {
+  return `${count} ${count === 1 ? "ingredient" : "ingredients"}`;
 }
 
 export function formatPresentationProgress(
