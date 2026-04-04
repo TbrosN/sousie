@@ -39,6 +39,8 @@ export const THEME = {
     dimmingOverlay: "rgba(3, 6, 12, 0.72)",
     composerOverlaySurface: "rgba(9, 15, 24, 0.88)",
     scrim: "rgba(5, 7, 13, 0.92)",
+    /** Opaque fill for presentation mode — scrim RGB without alpha so nothing bleeds through underneath. */
+    presentationBackdrop: "#05070d",
     shadow: "rgba(0, 0, 0, 0.32)",
   },
   font: {

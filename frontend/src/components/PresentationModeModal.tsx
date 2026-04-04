@@ -1,16 +1,23 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Dimensions,
   FlatList,
   Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Platform,
   Pressable,
+  ScaledSize,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import {
+  initialWindowMetrics,
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import {
   formatPresentationProgress,
@@ -31,15 +38,17 @@ type PresentationModeModalProps = {
   onClose: () => void;
 };
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
+const WINDOW_WIDTH = Dimensions.get("window").width;
 
-export function PresentationModeModal({
+function PresentationModeModalBody({
   recipe,
   visible,
   currentStepIndex,
   onStepChange,
   onClose,
-}: PresentationModeModalProps) {
+  screenSize,
+}: PresentationModeModalProps & { screenSize: ScaledSize }) {
+  const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList<Recipe["steps"][number]>>(null);
   const totalSteps = recipe.steps.length;
 
@@ -54,7 +63,7 @@ export function PresentationModeModal({
   }, [currentStepIndex, visible]);
 
   function handleMomentumScrollEnd(event: NativeSyntheticEvent<NativeScrollEvent>): void {
-    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / WINDOW_WIDTH);
     if (nextIndex !== currentStepIndex) {
       onStepChange(nextIndex);
     }
@@ -69,11 +78,15 @@ export function PresentationModeModal({
   }
 
   return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      presentationStyle="fullScreen"
-      onRequestClose={onClose}
+    <View
+      style={[
+        styles.screenSizedRoot,
+        {
+          width: screenSize.width,
+          height: screenSize.height,
+          backgroundColor: THEME.color.presentationBackdrop,
+        },
+      ]}
     >
       <View style={styles.container}>
         <View style={styles.chrome}>
@@ -91,6 +104,7 @@ export function PresentationModeModal({
 
         <FlatList
           ref={listRef}
+          style={styles.list}
           data={recipe.steps}
           horizontal
           pagingEnabled
@@ -126,13 +140,18 @@ export function PresentationModeModal({
             </View>
           )}
           getItemLayout={(_, index) => ({
-            length: SCREEN_WIDTH,
-            offset: SCREEN_WIDTH * index,
+            length: WINDOW_WIDTH,
+            offset: WINDOW_WIDTH * index,
             index,
           })}
         />
 
-        <View style={styles.footer}>
+        <View
+          style={[
+            styles.footer,
+            { paddingBottom: THEME.space.xxxl * 2 + insets.bottom },
+          ]}
+        >
           <Text style={styles.swipeHint}>{UI_COPY.presentationModeSwipeHint}</Text>
           <View style={styles.controls}>
             <Pressable
@@ -166,16 +185,60 @@ export function PresentationModeModal({
           </View>
         </View>
       </View>
+    </View>
+  );
+}
+
+export function PresentationModeModal({
+  recipe,
+  visible,
+  currentStepIndex,
+  onStepChange,
+  onClose,
+}: PresentationModeModalProps) {
+  const [screenSize, setScreenSize] = useState(() => Dimensions.get("screen"));
+
+  useEffect(() => {
+    const sub = Dimensions.addEventListener("change", ({ screen }) => {
+      setScreenSize(screen);
+    });
+    return () => sub.remove();
+  }, []);
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent
+      presentationStyle="overFullScreen"
+      statusBarTranslucent={Platform.OS === "android"}
+      navigationBarTranslucent={Platform.OS === "android"}
+      onRequestClose={onClose}
+    >
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <PresentationModeModalBody
+          recipe={recipe}
+          visible={visible}
+          currentStepIndex={currentStepIndex}
+          onStepChange={onStepChange}
+          onClose={onClose}
+          screenSize={screenSize}
+        />
+      </SafeAreaProvider>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  screenSizedRoot: {
+    flex: 0,
+  },
   container: {
     flex: 1,
-    backgroundColor: THEME.color.scrim,
     paddingTop: THEME.space.xxxl * 3,
-    paddingBottom: THEME.space.xxxl * 2,
+  },
+  list: {
+    flex: 1,
   },
   chrome: {
     flexDirection: "row",
@@ -217,7 +280,7 @@ const styles = StyleSheet.create({
     fontWeight: THEME.font.weightSemibold,
   },
   page: {
-    width: SCREEN_WIDTH,
+    width: WINDOW_WIDTH,
     flex: 1,
     paddingHorizontal: THEME.space.xxxl,
     justifyContent: "center",
@@ -286,6 +349,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: THEME.space.xxxl,
     paddingTop: THEME.space.xl,
     gap: THEME.space.lg,
+    flexShrink: 0,
+    backgroundColor: THEME.color.presentationBackdrop,
   },
   swipeHint: {
     color: THEME.color.textMuted,
