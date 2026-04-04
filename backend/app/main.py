@@ -66,3 +66,12 @@ async def chat(request: ChatRequest) -> ChatResponse:
     except Exception as exc:
         logger.error("Fatal unknown error during chat: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=ERROR_MESSAGE_GENERIC) from exc
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+    )
