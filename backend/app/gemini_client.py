@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import asyncio
 from typing import Any
 
 import httpx
@@ -15,6 +16,11 @@ class GeminiClient:
     def __init__(self) -> None:
         self._api_key = os.getenv("GEMINI_API_KEY")
         self._model = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+        self._known_tool_names = {
+            entry["name"]
+            for entry in build_tool_prompt_contract()
+            if isinstance(entry, dict) and isinstance(entry.get("name"), str)
+        }
 
     @property
     def is_enabled(self) -> bool:
@@ -32,24 +38,45 @@ class GeminiClient:
         url = GEMINI_API_URL_TEMPLATE.format(model=self._model, api_key=self._api_key)
         prompt_payload = self._build_prompt(recipe, recent_messages, user_message)
 
-        async with httpx.AsyncClient(timeout=20) as client:
-            response = await client.post(
-                url,
-                json={
-                    "contents": [{"parts": [{"text": prompt_payload}]}],
-                    "generationConfig": {
-                        "temperature": 0.2,
-                        "responseMimeType": "application/json",
-                    },
-                },
-            )
-            response.raise_for_status()
-
-        response_json = response.json()
+        response_json = await self._request_with_retry(url, prompt_payload)
         content_text = self._extract_text(response_json)
-        parsed = json.loads(content_text)
+        try:
+            parsed = json.loads(content_text)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("Gemini returned invalid JSON output") from exc
         normalized = self._normalize_envelope(parsed)
         return GeminiActionEnvelope.model_validate(normalized)
+
+    async def _request_with_retry(self, url: str, prompt_payload: str) -> dict[str, Any]:
+        request_body = {
+            "contents": [{"parts": [{"text": prompt_payload}]}],
+            "generationConfig": {
+                "temperature": 0.2,
+                "responseMimeType": "application/json",
+            },
+        }
+        max_attempts = 3
+        backoff_seconds = [0.25, 0.75]
+        timeout = httpx.Timeout(20.0, connect=10.0)
+
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            for attempt in range(max_attempts):
+                try:
+                    response = await client.post(url, json=request_body)
+                    response.raise_for_status()
+                    return response.json()
+                except (httpx.ConnectError, httpx.ReadTimeout, httpx.RemoteProtocolError) as exc:
+                    if attempt >= max_attempts - 1:
+                        raise RuntimeError("Gemini request failed due to a transient network error") from exc
+                    await asyncio.sleep(backoff_seconds[attempt])
+                except httpx.HTTPStatusError as exc:
+                    raise RuntimeError(f"Gemini request failed with status {exc.response.status_code}") from exc
+                except httpx.HTTPError as exc:
+                    raise RuntimeError("Gemini request failed before receiving a response") from exc
+                except ValueError as exc:
+                    raise RuntimeError("Gemini response was not valid JSON") from exc
+
+        raise RuntimeError("Gemini request failed after retries")
 
     def _build_prompt(
         self,
@@ -85,9 +112,11 @@ class GeminiClient:
                 "Each action.type must match a tool name exactly.",
                 "Do not return a tool definition object, only payload values.",
                 "If no recipe update is needed, set action to null and actions to [].",
+                "Always include assistant_message with a concise summary of what you changed or answered.",
+                "If actions is non-empty, assistant_message should mention the key edits in plain language.",
             ],
             "response_schema": {
-                "assistant_message": "string (optional if you provide messages[])",
+                "assistant_message": "string (required concise summary)",
                 "messages": ["string", "... optional additional text chunks ..."],
                 "action": {"type": "object | null", "required_when_not_null": ["type"]},
                 "actions": [
@@ -144,6 +173,20 @@ class GeminiClient:
             if normalized_chunks:
                 return "\n\n".join(normalized_chunks)
 
+        steps = payload.get("steps")
+        if isinstance(steps, list):
+            normalized_chunks: list[str] = []
+            for step in steps:
+                if not isinstance(step, dict):
+                    continue
+                for key in ("message", "assistant_message", "text", "content"):
+                    value = step.get(key)
+                    if isinstance(value, str) and value.strip():
+                        normalized_chunks.append(value.strip())
+                        break
+            if normalized_chunks:
+                return "\n\n".join(normalized_chunks)
+
         for key in ("assistant_message", "message", "response", "text"):
             value = payload.get(key)
             if isinstance(value, str):
@@ -171,6 +214,25 @@ class GeminiClient:
                 normalized = self._normalize_action_shape(item)
                 append_unique(normalized)
 
+        raw_tool_calls = payload.get("tool_calls")
+        if isinstance(raw_tool_calls, list):
+            for item in raw_tool_calls:
+                normalized = self._normalize_action_shape(item)
+                append_unique(normalized)
+
+        steps = payload.get("steps")
+        if isinstance(steps, list):
+            for step in steps:
+                if isinstance(step, dict):
+                    nested_action = step.get("action")
+                    append_unique(self._normalize_action_shape(nested_action))
+                    nested_actions = step.get("actions")
+                    if isinstance(nested_actions, list):
+                        for nested in nested_actions:
+                            append_unique(self._normalize_action_shape(nested))
+                    nested_tool_call = step.get("tool_call")
+                    append_unique(self._normalize_action_shape(nested_tool_call))
+
         single_action = self._extract_single_action(payload)
         append_unique(single_action)
 
@@ -196,19 +258,33 @@ class GeminiClient:
         if not isinstance(action, dict):
             return None
 
+        if isinstance(action.get("name"), str):
+            if action["name"] not in self._known_tool_names:
+                return None
+            tool_input = action.get("arguments")
+            if isinstance(tool_input, dict):
+                return {"type": action["name"], **tool_input}
+            return {"type": action["name"]}
+
         if (
             isinstance(action.get("type"), str)
             and isinstance(action.get("input"), dict)
             and action.get("type")
         ):
+            if action["type"] not in self._known_tool_names:
+                return None
             return {"type": action["type"], **action["input"]}
 
         if isinstance(action.get("tool"), str):
+            if action["tool"] not in self._known_tool_names:
+                return None
             tool_input = action.get("input")
             if isinstance(tool_input, dict):
                 return {"type": action["tool"], **tool_input}
             return {"type": action["tool"]}
 
         if isinstance(action.get("type"), str):
+            if action["type"] not in self._known_tool_names and action["type"] != "none":
+                return None
             return dict(action)
         return None

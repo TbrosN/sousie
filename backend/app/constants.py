@@ -24,7 +24,8 @@ SYSTEM_PROMPT = (
     "Phase 2 (revision and questions): after a full draft exists, treat each new user request as either "
     "a revision request or a cooking question. For revisions, choose the smallest tool action that satisfies the request. "
     "For questions, respond conversationally without forcing recipe edits. "
-    "You can be agentic within one turn: provide user-facing text, run one or more tool actions in order, then provide text."
+    "You can be agentic within one turn: Make multiple tool calls and output text in one response. "
+    "Always include a concise user-facing summary of what you changed, if you changed the recipe."
 )
 
 ERROR_MESSAGE_GENERIC = "Something went wrong. Please try again."
