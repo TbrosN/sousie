@@ -76,6 +76,9 @@ export const UI_COPY = {
     "Attach charts, screenshots, or diagrams that explain how you like to eat.",
   dietPreferencesOpen: "Edit diet preferences",
   dietPreferencesAddItem: "Add",
+  dietPreferencesDuplicateItem: "That item is already in this list.",
+  dietPreferencesDuplicateItemsDetected:
+    "Possible duplicates detected. Matching items are compared with lowercase text.",
 } as const;
 
 export function formatDeleteRecipeConfirmMessage(recipeTitle: string): string {

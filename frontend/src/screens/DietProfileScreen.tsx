@@ -351,6 +351,22 @@ function BubbleFieldCard({
   placeholder,
 }: BubbleFieldCardProps) {
   const [draftValue, setDraftValue] = useState("");
+  const [duplicateMessage, setDuplicateMessage] = useState("");
+  const sortedItems = useMemo(() => sortStringsCaseInsensitive(items), [items]);
+  const hasDuplicates = useMemo(() => {
+    const seen = new Set<string>();
+    for (const item of items) {
+      const normalized = item.trim().toLowerCase();
+      if (!normalized) {
+        continue;
+      }
+      if (seen.has(normalized)) {
+        return true;
+      }
+      seen.add(normalized);
+    }
+    return false;
+  }, [items]);
 
   function addItem(): void {
     const cleaned = draftValue.trim();
@@ -360,12 +376,16 @@ function BubbleFieldCard({
     const exists = items.some((item) => item.toLowerCase() === cleaned.toLowerCase());
     if (!exists) {
       onChangeItems([...items, cleaned]);
+      setDuplicateMessage("");
+    } else {
+      setDuplicateMessage(UI_COPY.dietPreferencesDuplicateItem);
     }
     setDraftValue("");
   }
 
   function removeItem(target: string): void {
     onChangeItems(items.filter((item) => item !== target));
+    setDuplicateMessage("");
   }
 
   return (
@@ -386,9 +406,17 @@ function BubbleFieldCard({
           <Text style={styles.addBubbleButtonText}>{UI_COPY.dietPreferencesAddItem}</Text>
         </Pressable>
       </View>
+      {duplicateMessage ? (
+        <Text style={styles.inlineWarningText}>{duplicateMessage}</Text>
+      ) : null}
+      {hasDuplicates ? (
+        <Text style={styles.inlineWarningText}>
+          {UI_COPY.dietPreferencesDuplicateItemsDetected}
+        </Text>
+      ) : null}
       <View style={styles.bubblesWrap}>
-        {items.map((item) => (
-          <View key={item} style={styles.bubble}>
+        {sortedItems.map((item, index) => (
+          <View key={`${item}-${index}`} style={styles.bubble}>
             <Text style={styles.bubbleText}>{item}</Text>
             <Pressable
               accessibilityLabel={`Remove ${item}`}
@@ -410,15 +438,15 @@ function BubbleFieldCard({
 
 function normalizeDietProfile(profile: DietProfile): DietProfile {
   return {
-    allergiesAndHardAvoids: dedupeStrings(profile.allergiesAndHardAvoids),
-    mostlyAvoid: dedupeStrings(profile.mostlyAvoid),
-    preferredIngredients: dedupeStrings(profile.preferredIngredients),
+    allergiesAndHardAvoids: dedupeAndSortStrings(profile.allergiesAndHardAvoids),
+    mostlyAvoid: dedupeAndSortStrings(profile.mostlyAvoid),
+    preferredIngredients: dedupeAndSortStrings(profile.preferredIngredients),
     freeformNotes: profile.freeformNotes.trim(),
     referenceImages: profile.referenceImages.slice(0, MAX_REFERENCE_IMAGES),
   };
 }
 
-function dedupeStrings(values: string[]): string[] {
+function dedupeAndSortStrings(values: string[]): string[] {
   const seen = new Set<string>();
   const normalized: string[] = [];
   for (const value of values) {
@@ -433,7 +461,13 @@ function dedupeStrings(values: string[]): string[] {
     seen.add(lowered);
     normalized.push(cleaned);
   }
-  return normalized;
+  return sortStringsCaseInsensitive(normalized);
+}
+
+function sortStringsCaseInsensitive(values: string[]): string[] {
+  return [...values].sort((left, right) =>
+    left.toLowerCase().localeCompare(right.toLowerCase())
+  );
 }
 
 function getImageExtension(
@@ -582,6 +616,10 @@ const styles = StyleSheet.create({
     color: THEME.color.textPrimary,
     fontSize: THEME.font.sizeSm,
     fontWeight: THEME.font.weightSemibold,
+  },
+  inlineWarningText: {
+    color: THEME.color.destructive,
+    fontSize: THEME.font.sizeSm,
   },
   bubblesWrap: {
     flexDirection: "row",

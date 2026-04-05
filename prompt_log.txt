@@ -711,3 +711,6 @@ It appears that the recipe agent is unable to add new recipes. When I ask it to 
 can you summarize our agent's toolset? Does the toolset make sense? any tools we should consolidate, remove, or add?
 
 I like this plan. Let's remove string_replace and make the other tool updates you suggest. Ensure that we update any necessary system prompts or docstrings so the agent knows what tools are available and when it should use them.
+
+Let's add some basic duplicate detection to the user dietary prefs, and show the bubbles in sorted order so it's easier for user to spot duplicates. Of course, normalize stuff with .lower()
+
