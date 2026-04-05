@@ -2,6 +2,7 @@ import { Platform } from "react-native";
 
 export const STORAGE_KEYS = {
   recipes: "sousie.recipes.v1",
+  dietProfile: "sousie.diet-profile.v1",
   /** Per-recipe chat transcripts: `${chatKeyPrefix}${recipeId}` */
   chatKeyPrefix: "sousie.chat.v1:",
 } as const;
@@ -50,6 +51,31 @@ export const UI_COPY = {
   chefModeSwipeHint: "Swipe left or right to move between steps.",
   chefModeEmpty: "This recipe needs at least one step before chef mode can begin.",
   chefModeNoIngredients: "No ingredients",
+  dietPreferencesTitle: "Diet Preferences",
+  dietPreferencesSubtitle:
+    "Sousie uses these saved preferences and reference images for every AI recipe action.",
+  dietPreferencesSave: "Save Preferences",
+  dietPreferencesSaved: "Preferences saved.",
+  dietPreferencesAddImage: "Add Reference Images",
+  dietPreferencesRemoveImage: "Remove image",
+  dietPreferencesImageLimit: "You can attach up to 3 reference images.",
+  dietPreferencesImagePickerError:
+    "Could not add that image right now. Please try again.",
+  dietPreferencesPermissionError:
+    "Photo access is needed to attach diet reference images.",
+  dietPreferencesSectionHardAvoids: "Allergies & Hard Avoids",
+  dietPreferencesSectionMostlyAvoid: "Mostly Avoid",
+  dietPreferencesSectionPreferred: "Things You Typically Buy & Have Around",
+  dietPreferencesSectionNotes: "Freeform Notes",
+  dietPreferencesSectionImages: "Reference Images",
+  dietPreferencesBubbleHint:
+    "Add items one at a time, then remove any bubble with the X.",
+  dietPreferencesNotesHint:
+    "Add any extra guidance, examples, or interpretation notes for your diet.",
+  dietPreferencesImagesHint:
+    "Attach charts, screenshots, or diagrams that explain how you like to eat.",
+  dietPreferencesOpen: "Edit diet preferences",
+  dietPreferencesAddItem: "Add",
 } as const;
 
 export function formatDeleteRecipeConfirmMessage(recipeTitle: string): string {

@@ -53,6 +53,73 @@ class Recipe(BaseModel):
         return cleaned
 
 
+class DietProfileImage(BaseModel):
+    id: str
+    filename: str | None = None
+    mime_type: str | None = None
+    width: int | None = Field(default=None, ge=1)
+    height: int | None = Field(default=None, ge=1)
+    file_size: int | None = Field(default=None, ge=1)
+    data_base64: str | None = None
+
+    @field_validator("id")
+    @classmethod
+    def image_id_not_empty(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Image id must not be empty")
+        return cleaned
+
+    @field_validator("filename", "mime_type", "data_base64")
+    @classmethod
+    def optional_text_is_trimmed(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+
+class DietProfile(BaseModel):
+    allergies_and_hard_avoids: list[str] = Field(default_factory=list)
+    mostly_avoid: list[str] = Field(default_factory=list)
+    preferred_ingredients: list[str] = Field(default_factory=list)
+    freeform_notes: str = ""
+    reference_images: list[DietProfileImage] = Field(default_factory=list, max_length=3)
+
+    @field_validator(
+        "allergies_and_hard_avoids",
+        "mostly_avoid",
+        "preferred_ingredients",
+        mode="before",
+    )
+    @classmethod
+    def normalize_string_lists(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        if not isinstance(value, list):
+            raise ValueError("Diet profile lists must be arrays")
+
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for item in value:
+            if not isinstance(item, str):
+                continue
+            cleaned = item.strip()
+            if not cleaned:
+                continue
+            lowered = cleaned.lower()
+            if lowered in seen:
+                continue
+            seen.add(lowered)
+            normalized.append(cleaned)
+        return normalized
+
+    @field_validator("freeform_notes")
+    @classmethod
+    def normalize_freeform_notes(cls, value: str) -> str:
+        return value.strip()
+
+
 class ChatMessageRole(str, Enum):
     user = "user"
     assistant = "assistant"
@@ -129,6 +196,7 @@ class ChatRequest(BaseModel):
     recipe: Recipe
     messages: list[ChatMessage]
     user_message: str
+    diet_profile: DietProfile | None = None
 
     @field_validator("recipe_id", "user_message")
     @classmethod
@@ -148,6 +216,7 @@ class ChatResponse(BaseModel):
 class IngredientSubstitutionsRequest(BaseModel):
     recipe: Recipe
     ingredient_name: str
+    diet_profile: DietProfile | None = None
 
     @field_validator("ingredient_name")
     @classmethod
@@ -165,6 +234,7 @@ class IngredientSubstitutionsResponse(BaseModel):
 class IngredientRemovalRequest(BaseModel):
     recipe: Recipe
     ingredient_name: str
+    diet_profile: DietProfile | None = None
 
     @field_validator("ingredient_name")
     @classmethod
@@ -179,6 +249,7 @@ class IngredientSubstitutionRequest(BaseModel):
     recipe: Recipe
     old_ingredient_name: str
     new_ingredient_name: str
+    diet_profile: DietProfile | None = None
 
     @field_validator("old_ingredient_name", "new_ingredient_name")
     @classmethod

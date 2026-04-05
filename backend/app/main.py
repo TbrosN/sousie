@@ -88,6 +88,7 @@ async def ingredient_substitutions(
         return await chat_service.suggest_ingredient_substitutions(
             recipe=request.recipe,
             ingredient_name=request.ingredient_name,
+            diet_profile=request.diet_profile,
         )
     except ValueError as exc:
         logger.warning("Non-fatal substitutions warning: %s", exc, exc_info=True)
@@ -106,6 +107,7 @@ async def ingredient_remove(request: IngredientRemovalRequest) -> IngredientEdit
         return await chat_service.handle_ingredient_removal(
             recipe=request.recipe,
             ingredient_name=request.ingredient_name,
+            diet_profile=request.diet_profile,
         )
     except ValueError as exc:
         logger.warning("Non-fatal ingredient removal warning: %s", exc, exc_info=True)
@@ -127,6 +129,7 @@ async def ingredient_substitute(
             recipe=request.recipe,
             old_ingredient_name=request.old_ingredient_name,
             new_ingredient_name=request.new_ingredient_name,
+            diet_profile=request.diet_profile,
         )
     except ValueError as exc:
         logger.warning("Non-fatal ingredient substitution warning: %s", exc, exc_info=True)

@@ -8,7 +8,7 @@ from typing import Any
 import httpx
 
 from app.constants import DEFAULT_GEMINI_MODEL, GEMINI_API_URL_TEMPLATE, SYSTEM_PROMPT
-from app.models import ChatMessage, GeminiActionEnvelope, Recipe
+from app.models import ChatMessage, DietProfile, GeminiActionEnvelope, Recipe
 from app.tools import build_tool_prompt_contract
 
 
@@ -31,14 +31,20 @@ class GeminiClient:
         recipe: Recipe,
         recent_messages: list[ChatMessage],
         user_message: str,
+        diet_profile: DietProfile | None = None,
     ) -> GeminiActionEnvelope:
         if not self._api_key:
             raise RuntimeError("GEMINI_API_KEY is not configured")
 
         url = GEMINI_API_URL_TEMPLATE.format(model=self._model, api_key=self._api_key)
-        prompt_payload = self._build_prompt(recipe, recent_messages, user_message)
+        request_body = self._build_chat_request_body(
+            recipe=recipe,
+            recent_messages=recent_messages,
+            user_message=user_message,
+            diet_profile=diet_profile,
+        )
 
-        response_json = await self._request_with_retry(url, prompt_payload)
+        response_json = await self._request_with_retry(url, request_body)
         content_text = self._extract_text(response_json)
         try:
             parsed = json.loads(content_text)
@@ -51,14 +57,19 @@ class GeminiClient:
         self,
         recipe: Recipe,
         ingredient_name: str,
+        diet_profile: DietProfile | None = None,
     ) -> list[str]:
         if not self._api_key:
             raise RuntimeError("GEMINI_API_KEY is not configured")
 
         url = GEMINI_API_URL_TEMPLATE.format(model=self._model, api_key=self._api_key)
-        prompt_payload = self._build_substitutions_prompt(recipe, ingredient_name)
+        request_body = self._build_substitutions_request_body(
+            recipe=recipe,
+            ingredient_name=ingredient_name,
+            diet_profile=diet_profile,
+        )
 
-        response_json = await self._request_with_retry(url, prompt_payload)
+        response_json = await self._request_with_retry(url, request_body)
         content_text = self._extract_text(response_json)
         try:
             parsed = json.loads(content_text)
@@ -90,9 +101,9 @@ class GeminiClient:
             raise RuntimeError("Gemini returned no ingredient substitutions")
         return normalized
 
-    async def _request_with_retry(self, url: str, prompt_payload: str) -> dict[str, Any]:
-        request_body = {
-            "contents": [{"parts": [{"text": prompt_payload}]}],
+    async def _request_with_retry(self, url: str, request_body: dict[str, Any]) -> dict[str, Any]:
+        request_body_with_config = {
+            **request_body,
             "generationConfig": {
                 "temperature": 0.2,
                 "responseMimeType": "application/json",
@@ -105,7 +116,7 @@ class GeminiClient:
         async with httpx.AsyncClient(timeout=timeout) as client:
             for attempt in range(max_attempts):
                 try:
-                    response = await client.post(url, json=request_body)
+                    response = await client.post(url, json=request_body_with_config)
                     response.raise_for_status()
                     return response.json()
                 except (httpx.ConnectError, httpx.ReadTimeout, httpx.RemoteProtocolError) as exc:
@@ -121,12 +132,13 @@ class GeminiClient:
 
         raise RuntimeError("Gemini request failed after retries")
 
-    def _build_prompt(
+    def _build_chat_request_body(
         self,
         recipe: Recipe,
         recent_messages: list[ChatMessage],
         user_message: str,
-    ) -> str:
+        diet_profile: DietProfile | None,
+    ) -> dict[str, Any]:
         recipe_likely_needs_initial_draft = (
             len(recipe.steps) == 0
             or recipe.title.strip().lower() in {"new recipe", "untitled", "recipe"}
@@ -144,6 +156,7 @@ class GeminiClient:
                     "If false, apply targeted revision actions to current recipe."
                 ),
             },
+            "diet_profile": self._serialize_diet_profile(diet_profile),
             "recipe": recipe.model_dump(),
             "messages": messages_payload,
             "latest_user_message": user_message,
@@ -157,6 +170,10 @@ class GeminiClient:
                 "If no recipe update is needed, set action to null and actions to [].",
                 "Always include assistant_message with a concise summary of what you changed or answered.",
                 "If actions is non-empty, assistant_message should mention the key edits in plain language.",
+                "Never introduce ingredients from allergies_and_hard_avoids.",
+                "Treat mostly_avoid ingredients as soft constraints to minimize unless needed for recipe coherence.",
+                "Prefer preferred_ingredients when they fit the user's request.",
+                "If reference diet images are attached, use them as authoritative supporting context.",
             ],
             "response_schema": {
                 "assistant_message": "string (required concise summary)",
@@ -167,14 +184,29 @@ class GeminiClient:
                 ],
             },
         }
-        return json.dumps(instruction)
+        return {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": json.dumps(instruction)},
+                        *self._build_image_parts(diet_profile),
+                    ]
+                }
+            ]
+        }
 
-    def _build_substitutions_prompt(self, recipe: Recipe, ingredient_name: str) -> str:
+    def _build_substitutions_request_body(
+        self,
+        recipe: Recipe,
+        ingredient_name: str,
+        diet_profile: DietProfile | None,
+    ) -> dict[str, Any]:
         instruction = {
             "system_prompt": (
                 "You are helping a cooking app suggest ingredient substitutions. "
                 "Return only practical replacements that fit the recipe context."
             ),
+            "diet_profile": self._serialize_diet_profile(diet_profile),
             "recipe": recipe.model_dump(),
             "ingredient_to_replace": ingredient_name,
             "output_rules": [
@@ -183,12 +215,66 @@ class GeminiClient:
                 "Favor substitutes that preserve the recipe's flavor, texture, and cooking method.",
                 "Use concise ingredient names only, not sentences.",
                 "Do not include the original ingredient.",
+                "Never suggest ingredients from allergies_and_hard_avoids.",
+                "Prefer preferred_ingredients when they are suitable substitutions.",
+                "Minimize mostly_avoid ingredients unless options are limited.",
+                "Use attached reference diet images when they contain relevant guidance.",
             ],
             "response_schema": {
                 "substitutions": ["string", "string", "string"],
             },
         }
-        return json.dumps(instruction)
+        return {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": json.dumps(instruction)},
+                        *self._build_image_parts(diet_profile),
+                    ]
+                }
+            ]
+        }
+
+    def _serialize_diet_profile(self, diet_profile: DietProfile | None) -> dict[str, Any] | None:
+        if diet_profile is None:
+            return None
+
+        return {
+            "allergies_and_hard_avoids": diet_profile.allergies_and_hard_avoids,
+            "mostly_avoid": diet_profile.mostly_avoid,
+            "preferred_ingredients": diet_profile.preferred_ingredients,
+            "freeform_notes": diet_profile.freeform_notes,
+            "reference_images": [
+                {
+                    "id": image.id,
+                    "filename": image.filename,
+                    "mime_type": image.mime_type,
+                    "width": image.width,
+                    "height": image.height,
+                    "file_size": image.file_size,
+                    "included_inline": bool(image.data_base64),
+                }
+                for image in diet_profile.reference_images
+            ],
+        }
+
+    def _build_image_parts(self, diet_profile: DietProfile | None) -> list[dict[str, Any]]:
+        if diet_profile is None:
+            return []
+
+        parts: list[dict[str, Any]] = []
+        for image in diet_profile.reference_images:
+            if not image.data_base64:
+                continue
+            parts.append(
+                {
+                    "inlineData": {
+                        "mimeType": image.mime_type or "image/jpeg",
+                        "data": image.data_base64,
+                    }
+                }
+            )
+        return parts
 
     def _extract_text(self, payload: dict) -> str:
         candidates = payload.get("candidates", [])

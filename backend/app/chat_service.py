@@ -9,6 +9,7 @@ from app.models import (
     ChatMessage,
     ChatRequest,
     ChatResponse,
+    DietProfile,
     IngredientEditResponse,
     IngredientSubstitutionsResponse,
     Recipe,
@@ -31,6 +32,7 @@ class ChatService:
             recipe=recipe,
             recent_messages=recent_messages,
             user_message=request.user_message,
+            diet_profile=request.diet_profile,
         )
         updated_recipe = execute_agent_actions(
             recipe=recipe,
@@ -49,10 +51,12 @@ class ChatService:
         self,
         recipe: Recipe,
         ingredient_name: str,
+        diet_profile: DietProfile | None = None,
     ) -> IngredientSubstitutionsResponse:
         substitutions = await self._gemini_client.suggest_ingredient_substitutions(
             recipe=recipe,
             ingredient_name=ingredient_name,
+            diet_profile=diet_profile,
         )
         return IngredientSubstitutionsResponse(substitutions=substitutions)
 
@@ -60,6 +64,7 @@ class ChatService:
         self,
         recipe: Recipe,
         ingredient_name: str,
+        diet_profile: DietProfile | None = None,
     ) -> IngredientEditResponse:
         deterministically_updated_recipe = execute_agent_actions(
             recipe=recipe,
@@ -77,6 +82,7 @@ class ChatService:
             fallback_message=(
                 f"Removed {ingredient_name} from the ingredient lists and updated the recipe where needed."
             ),
+            diet_profile=diet_profile,
         )
 
     async def handle_ingredient_substitution(
@@ -84,6 +90,7 @@ class ChatService:
         recipe: Recipe,
         old_ingredient_name: str,
         new_ingredient_name: str,
+        diet_profile: DietProfile | None = None,
     ) -> IngredientEditResponse:
         deterministically_updated_recipe = execute_agent_actions(
             recipe=recipe,
@@ -108,6 +115,7 @@ class ChatService:
             fallback_message=(
                 f"Swapped {old_ingredient_name} for {new_ingredient_name} and updated the recipe where needed."
             ),
+            diet_profile=diet_profile,
         )
 
     async def _select_actions(
@@ -115,12 +123,14 @@ class ChatService:
         recipe: Recipe,
         recent_messages: list[ChatMessage],
         user_message: str,
+        diet_profile: DietProfile | None = None,
     ) -> tuple[list[dict[str, Any]], str]:
         if self._gemini_client.is_enabled:
             gemini_output = await self._gemini_client.suggest_action(
                 recipe=recipe,
                 recent_messages=recent_messages,
                 user_message=user_message,
+                diet_profile=diet_profile,
             )
             selected_actions = list(gemini_output.actions)
             if gemini_output.action is not None:
@@ -134,11 +144,13 @@ class ChatService:
         recipe: Recipe,
         cleanup_prompt: str,
         fallback_message: str,
+        diet_profile: DietProfile | None = None,
     ) -> IngredientEditResponse:
         action_payloads, assistant_message = await self._select_actions(
             recipe=recipe,
             recent_messages=[],
             user_message=cleanup_prompt,
+            diet_profile=diet_profile,
         )
         updated_recipe = execute_agent_actions(
             recipe=recipe,
