@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import json
 import re
 from typing import Callable
 
 from langchain_core.tools import BaseTool, StructuredTool
 
-from app.models import Ingredient, Recipe
+from app.models import Ingredient, Recipe, RecipeStep
 
 
 def set_servings(recipe: Recipe, servings: int) -> Recipe:
@@ -29,6 +28,23 @@ def add_ingredient(
         )
     )
     return recipe
+
+
+def update_step_ingredient(
+    recipe: Recipe,
+    step_index: int,
+    ingredient_name: str,
+    new_name: str,
+    quantity_per_serving: float,
+    unit: str,
+) -> Recipe:
+    for ingredient in recipe.steps[step_index].ingredients:
+        if _ingredient_names_match(ingredient.name, ingredient_name):
+            ingredient.name = new_name
+            ingredient.quantity_per_serving = quantity_per_serving
+            ingredient.unit = unit
+            return recipe
+    raise ValueError(f"Ingredient '{ingredient_name}' not found in step {step_index}")
 
 
 def remove_ingredient(recipe: Recipe, name: str) -> Recipe:
@@ -54,10 +70,33 @@ def replace_step_instructions(recipe: Recipe, step_index: int, instructions: str
     return recipe
 
 
-def string_replace(recipe: Recipe, target: str, replacement: str) -> Recipe:
-    serialized_recipe = recipe.model_dump_json()
-    replaced = serialized_recipe.replace(target, replacement)
-    return Recipe.model_validate(json.loads(replaced))
+def replace_step(
+    recipe: Recipe,
+    step_index: int,
+    instructions: str,
+    ingredients: list[Ingredient],
+) -> Recipe:
+    recipe.steps[step_index].instructions = instructions
+    recipe.steps[step_index].ingredients = ingredients
+    return recipe
+
+
+def insert_step(
+    recipe: Recipe,
+    step_index: int,
+    instructions: str,
+    ingredients: list[Ingredient],
+) -> Recipe:
+    bounded_index = min(step_index, len(recipe.steps))
+    recipe.steps.insert(bounded_index, RecipeStep(instructions=instructions, ingredients=ingredients))
+    return recipe
+
+
+def delete_step(recipe: Recipe, step_index: int) -> Recipe:
+    if step_index >= len(recipe.steps):
+        raise ValueError(f"Step index {step_index} is out of range")
+    del recipe.steps[step_index]
+    return recipe
 
 
 def replace_recipe(recipe: Recipe, replacement: Recipe) -> Recipe:
@@ -82,8 +121,13 @@ def build_tools() -> dict[str, BaseTool]:
         ),
         "add_ingredient": _tool(
             "add_ingredient",
-            "Add ingredient to a given step index.",
+            "Add one structured ingredient to a specific step when the step text can stay as-is or will be updated by another action in the same turn.",
             add_ingredient,
+        ),
+        "update_step_ingredient": _tool(
+            "update_step_ingredient",
+            "Update one existing structured ingredient within a specific step, including its name, quantity, and unit. Use this for precise ingredient changes that do not require rebuilding the whole step.",
+            update_step_ingredient,
         ),
         "remove_ingredient": _tool(
             "remove_ingredient",
@@ -97,13 +141,23 @@ def build_tools() -> dict[str, BaseTool]:
         ),
         "replace_instructions": _tool(
             "replace_instructions",
-            "Replace instructions text for a specific step.",
+            "Replace instructions text for a specific step. Use this only when the step ingredient list stays exactly the same.",
             replace_step_instructions,
         ),
-        "string_replace": _tool(
-            "string_replace",
-            "Perform plain string replacement over serialized recipe JSON.",
-            string_replace,
+        "replace_step": _tool(
+            "replace_step",
+            "Replace a full step including both instructions and its structured ingredient list. Use this whenever a step gains, loses, swaps, or changes ingredient quantities.",
+            replace_step,
+        ),
+        "insert_step": _tool(
+            "insert_step",
+            "Insert a new step at a specific index with both instructions and structured ingredients. Use this when the recipe gains a new step.",
+            insert_step,
+        ),
+        "delete_step": _tool(
+            "delete_step",
+            "Delete a step at a specific index. Use this when the recipe no longer needs that step.",
+            delete_step,
         ),
         "replace_recipe": _tool(
             "replace_recipe",
@@ -122,11 +176,23 @@ def build_tool_prompt_contract() -> list[dict[str, object]]:
         },
         {
             "name": "add_ingredient",
-            "description": "Add ingredient to a given step index.",
+            "description": "Add one structured ingredient to a specific step when the step text can stay as-is or will be updated by another action in the same turn.",
             "payload_schema": {
                 "type": "add_ingredient",
                 "step_index": "integer >= 0",
                 "name": "string",
+                "quantity_per_serving": "number >= 0",
+                "unit": "string",
+            },
+        },
+        {
+            "name": "update_step_ingredient",
+            "description": "Update one existing structured ingredient within a specific step, including its name, quantity, and unit. Use this for precise ingredient changes that do not require rebuilding the whole step.",
+            "payload_schema": {
+                "type": "update_step_ingredient",
+                "step_index": "integer >= 0",
+                "ingredient_name": "string",
+                "new_name": "string",
                 "quantity_per_serving": "number >= 0",
                 "unit": "string",
             },
@@ -147,7 +213,7 @@ def build_tool_prompt_contract() -> list[dict[str, object]]:
         },
         {
             "name": "replace_instructions",
-            "description": "Replace instructions text for a specific step.",
+            "description": "Replace instructions text for a specific step. Use this only when the step ingredient list stays exactly the same.",
             "payload_schema": {
                 "type": "replace_instructions",
                 "step_index": "integer >= 0",
@@ -155,12 +221,43 @@ def build_tool_prompt_contract() -> list[dict[str, object]]:
             },
         },
         {
-            "name": "string_replace",
-            "description": "Perform plain string replacement over serialized recipe JSON.",
+            "name": "replace_step",
+            "description": "Replace a full step including both instructions and its structured ingredient list. Use this whenever a step gains, loses, swaps, or changes ingredient quantities.",
             "payload_schema": {
-                "type": "string_replace",
-                "target": "string",
-                "replacement": "string",
+                "type": "replace_step",
+                "step_index": "integer >= 0",
+                "instructions": "string",
+                "ingredients": [
+                    {
+                        "name": "string",
+                        "quantity_per_serving": "number >= 0",
+                        "unit": "string",
+                    }
+                ],
+            },
+        },
+        {
+            "name": "insert_step",
+            "description": "Insert a new step at a specific index with both instructions and structured ingredients. Use this when the recipe gains a new step.",
+            "payload_schema": {
+                "type": "insert_step",
+                "step_index": "integer >= 0",
+                "instructions": "string",
+                "ingredients": [
+                    {
+                        "name": "string",
+                        "quantity_per_serving": "number >= 0",
+                        "unit": "string",
+                    }
+                ],
+            },
+        },
+        {
+            "name": "delete_step",
+            "description": "Delete a step at a specific index. Use this when the recipe no longer needs that step.",
+            "payload_schema": {
+                "type": "delete_step",
+                "step_index": "integer >= 0",
             },
         },
         {

@@ -152,6 +152,15 @@ class AddIngredientAction(BaseModel):
     unit: str
 
 
+class UpdateStepIngredientAction(BaseModel):
+    type: Literal["update_step_ingredient"]
+    step_index: int = Field(ge=0)
+    ingredient_name: str
+    new_name: str
+    quantity_per_serving: float = Field(ge=0)
+    unit: str
+
+
 class RemoveIngredientAction(BaseModel):
     type: Literal["remove_ingredient"]
     name: str
@@ -169,10 +178,23 @@ class ReplaceInstructionsAction(BaseModel):
     instructions: str
 
 
-class StringReplaceAction(BaseModel):
-    type: Literal["string_replace"]
-    target: str
-    replacement: str
+class ReplaceStepAction(BaseModel):
+    type: Literal["replace_step"]
+    step_index: int = Field(ge=0)
+    instructions: str
+    ingredients: list[Ingredient]
+
+
+class InsertStepAction(BaseModel):
+    type: Literal["insert_step"]
+    step_index: int = Field(ge=0)
+    instructions: str
+    ingredients: list[Ingredient]
+
+
+class DeleteStepAction(BaseModel):
+    type: Literal["delete_step"]
+    step_index: int = Field(ge=0)
 
 
 class ReplaceRecipeAction(BaseModel):
@@ -183,10 +205,13 @@ class ReplaceRecipeAction(BaseModel):
 Action = (
     SetServingsAction
     | AddIngredientAction
+    | UpdateStepIngredientAction
     | RemoveIngredientAction
     | SubstituteIngredientAction
     | ReplaceInstructionsAction
-    | StringReplaceAction
+    | ReplaceStepAction
+    | InsertStepAction
+    | DeleteStepAction
     | ReplaceRecipeAction
 )
 

@@ -198,11 +198,25 @@ class ChatService:
                 name = action.get("name")
                 if isinstance(name, str) and name.strip():
                     summary_parts.append(f"added {name.strip()}")
+            elif action_type == "update_step_ingredient":
+                ingredient_name = action.get("ingredient_name")
+                new_name = action.get("new_name")
+                if isinstance(ingredient_name, str) and isinstance(new_name, str):
+                    summary_parts.append(
+                        f"updated {ingredient_name.strip()} to {new_name.strip()}"
+                    )
             elif action_type == "replace_instructions":
                 step_index = action.get("step_index")
                 summary_parts.append(f"updated instructions for step {step_index}")
-            elif action_type == "string_replace":
-                summary_parts.append("applied text updates across the recipe")
+            elif action_type == "replace_step":
+                step_index = action.get("step_index")
+                summary_parts.append(f"updated step {step_index}")
+            elif action_type == "insert_step":
+                step_index = action.get("step_index")
+                summary_parts.append(f"inserted step {step_index}")
+            elif action_type == "delete_step":
+                step_index = action.get("step_index")
+                summary_parts.append(f"deleted step {step_index}")
 
         if not summary_parts:
             return "I updated the recipe based on your request."

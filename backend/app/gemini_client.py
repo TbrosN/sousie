@@ -174,6 +174,12 @@ class GeminiClient:
                 "Treat mostly_avoid ingredients as soft constraints to minimize unless needed for recipe coherence.",
                 "Prefer preferred_ingredients when they fit the user's request.",
                 "If reference diet images are attached, use them as authoritative supporting context.",
+                "If you change a step's ingredients, you must also update that step's structured ingredients in the same turn.",
+                "Do not use replace_instructions alone when a step gains, loses, swaps, or changes ingredient quantities.",
+                "Prefer replace_step for coherent step-level edits that change both instructions and ingredients.",
+                "Use insert_step to add a new step and delete_step to remove a step instead of rewriting unrelated steps.",
+                "Use update_step_ingredient for precise edits to one ingredient inside a step.",
+                "Do not invent tools beyond the provided tool list.",
             ],
             "response_schema": {
                 "assistant_message": "string (required concise summary)",
