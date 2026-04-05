@@ -1,6 +1,11 @@
+import * as FileSystem from "expo-file-system/legacy";
+
 import { BACKEND_CONFIG } from "@/src/constants/app";
+import { LOG_MESSAGES } from "@/src/constants/logMessages";
 import { ChatMessage } from "@/src/types/chat";
+import { DietProfile } from "@/src/types/dietProfile";
 import { Ingredient, Recipe, RecipeStep } from "@/src/types/recipe";
+import { logWarning } from "@/src/utils/logger";
 
 type BackendIngredient = {
   name: string;
@@ -39,11 +44,30 @@ type BackendIngredientEditResponse = {
   recipe: BackendRecipe;
 };
 
+type BackendDietProfileImage = {
+  id: string;
+  filename?: string;
+  mime_type?: string;
+  width?: number;
+  height?: number;
+  file_size?: number;
+  data_base64?: string;
+};
+
+type BackendDietProfile = {
+  allergies_and_hard_avoids: string[];
+  mostly_avoid: string[];
+  preferred_ingredients: string[];
+  freeform_notes: string;
+  reference_images: BackendDietProfileImage[];
+};
+
 export class BackendClient {
   static async sendChat(
     recipe: Recipe,
     messages: ChatMessage[],
-    userMessage: string
+    userMessage: string,
+    dietProfile?: DietProfile
   ): Promise<{ assistantMessage: string; recipe: Recipe }> {
     const recentMessages = messages.map<BackendMessage>((message) => ({
       role: message.role,
@@ -62,6 +86,7 @@ export class BackendClient {
           recipe: toBackendRecipe(recipe),
           messages: recentMessages,
           user_message: userMessage,
+          diet_profile: await toBackendDietProfile(dietProfile),
         }),
       }
     );
@@ -79,7 +104,8 @@ export class BackendClient {
 
   static async suggestIngredientSubstitutions(
     recipe: Recipe,
-    ingredientName: string
+    ingredientName: string,
+    dietProfile?: DietProfile
   ): Promise<string[]> {
     const response = await fetch(
       `${BACKEND_CONFIG.baseUrl}${BACKEND_CONFIG.ingredientSubstitutionsPath}`,
@@ -91,6 +117,7 @@ export class BackendClient {
         body: JSON.stringify({
           recipe: toBackendRecipe(recipe),
           ingredient_name: ingredientName,
+          diet_profile: await toBackendDietProfile(dietProfile),
         }),
       }
     );
@@ -105,7 +132,8 @@ export class BackendClient {
 
   static async removeIngredient(
     recipe: Recipe,
-    ingredientName: string
+    ingredientName: string,
+    dietProfile?: DietProfile
   ): Promise<{ assistantMessage: string; recipe: Recipe }> {
     const response = await fetch(
       `${BACKEND_CONFIG.baseUrl}${BACKEND_CONFIG.ingredientRemovePath}`,
@@ -117,6 +145,7 @@ export class BackendClient {
         body: JSON.stringify({
           recipe: toBackendRecipe(recipe),
           ingredient_name: ingredientName,
+          diet_profile: await toBackendDietProfile(dietProfile),
         }),
       }
     );
@@ -135,7 +164,8 @@ export class BackendClient {
   static async substituteIngredient(
     recipe: Recipe,
     oldIngredientName: string,
-    newIngredientName: string
+    newIngredientName: string,
+    dietProfile?: DietProfile
   ): Promise<{ assistantMessage: string; recipe: Recipe }> {
     const response = await fetch(
       `${BACKEND_CONFIG.baseUrl}${BACKEND_CONFIG.ingredientSubstitutePath}`,
@@ -148,6 +178,7 @@ export class BackendClient {
           recipe: toBackendRecipe(recipe),
           old_ingredient_name: oldIngredientName,
           new_ingredient_name: newIngredientName,
+          diet_profile: await toBackendDietProfile(dietProfile),
         }),
       }
     );
@@ -195,4 +226,69 @@ function fromBackendRecipe(recipe: BackendRecipe, previousUpdatedAt: string): Re
     })),
     updatedAt: previousUpdatedAt,
   };
+}
+
+async function toBackendDietProfile(
+  dietProfile?: DietProfile
+): Promise<BackendDietProfile | null> {
+  if (!dietProfile) {
+    return null;
+  }
+
+  const imageResults = await Promise.all(
+    dietProfile.referenceImages.map(async (image): Promise<BackendDietProfileImage | null> => {
+      try {
+        const info = await FileSystem.getInfoAsync(image.uri);
+        if (!info.exists) {
+          return null;
+        }
+
+        const dataBase64 = await FileSystem.readAsStringAsync(image.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        return {
+          id: image.id,
+          filename: image.filename,
+          mime_type: image.mimeType ?? guessMimeType(image.filename ?? image.uri),
+          width: image.width,
+          height: image.height,
+          file_size: image.fileSize,
+          data_base64: dataBase64,
+        };
+      } catch (error) {
+        logWarning(LOG_MESSAGES.dietProfileImageReadFailed, error);
+        return null;
+      }
+    })
+  );
+  const referenceImages = imageResults.filter(isBackendDietProfileImage);
+
+  return {
+    allergies_and_hard_avoids: dietProfile.allergiesAndHardAvoids,
+    mostly_avoid: dietProfile.mostlyAvoid,
+    preferred_ingredients: dietProfile.preferredIngredients,
+    freeform_notes: dietProfile.freeformNotes,
+    reference_images: referenceImages,
+  };
+}
+
+function guessMimeType(value: string): string {
+  const normalized = value.toLowerCase();
+  if (normalized.endsWith(".png")) {
+    return "image/png";
+  }
+  if (normalized.endsWith(".webp")) {
+    return "image/webp";
+  }
+  if (normalized.endsWith(".gif")) {
+    return "image/gif";
+  }
+  return "image/jpeg";
+}
+
+function isBackendDietProfileImage(
+  image: BackendDietProfileImage | null
+): image is BackendDietProfileImage {
+  return image !== null;
 }

@@ -9,6 +9,7 @@ import { RecipeView } from "@/src/components/RecipeView";
 import { formatIngredientDeleteConfirmMessage, UI_COPY } from "@/src/constants/app";
 import { LOG_MESSAGES } from "@/src/constants/logMessages";
 import { THEME } from "@/src/constants/theme";
+import { useDietProfile } from "@/src/context/DietProfileContext";
 import { useRecipes } from "@/src/context/RecipesContext";
 import { useNetworkStatus } from "@/src/hooks/useNetworkStatus";
 import { BackendClient } from "@/src/services/backendClient";
@@ -24,6 +25,7 @@ type RecipeEditorScreenProps = {
 
 export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
   const { getRecipeById, updateRecipe } = useRecipes();
+  const { dietProfile } = useDietProfile();
   const isOnline = useNetworkStatus();
 
   const recipe = useMemo(() => getRecipeById(recipeId), [getRecipeById, recipeId]);
@@ -90,7 +92,12 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
       setIsSending(true);
 
       try {
-        const result = await BackendClient.sendChat(activeRecipe, nextMessages, trimmed);
+        const result = await BackendClient.sendChat(
+          activeRecipe,
+          nextMessages,
+          trimmed,
+          dietProfile
+        );
         const assistantMessage: ChatMessage = {
           id: buildId("msg"),
           role: "assistant",
@@ -115,7 +122,7 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
         setIsSending(false);
       }
     },
-    [activeRecipe, isOnline, messages, recipeId, updateRecipe]
+    [activeRecipe, dietProfile, isOnline, messages, recipeId, updateRecipe]
   );
 
   function handleSubmit(): void {
@@ -155,7 +162,8 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
       try {
         const substitutions = await BackendClient.suggestIngredientSubstitutions(
           activeRecipe,
-          ingredientName
+          ingredientName,
+          dietProfile
         );
         setSubstitutionOptions(substitutions);
       } catch (error) {
@@ -166,7 +174,7 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
         setIsLoadingSubstitutions(false);
       }
     },
-    [activeRecipe, closeSwapModal, isOnline, isSending]
+    [activeRecipe, closeSwapModal, dietProfile, isOnline, isSending]
   );
 
   const openChefMode = useCallback(() => {
@@ -203,7 +211,11 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
       setMessages(nextMessages);
 
       try {
-        const result = await BackendClient.removeIngredient(activeRecipe, ingredientName);
+        const result = await BackendClient.removeIngredient(
+          activeRecipe,
+          ingredientName,
+          dietProfile
+        );
         const assistantMessage: ChatMessage = {
           id: buildId("msg"),
           role: "assistant",
@@ -224,7 +236,7 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
         setIsSending(false);
       }
     },
-    [activeRecipe, isOnline, messages, recipeId, updateRecipe]
+    [activeRecipe, dietProfile, isOnline, messages, recipeId, updateRecipe]
   );
 
   const handleIngredientRemovePress = useCallback(
@@ -282,7 +294,8 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
         const result = await BackendClient.substituteIngredient(
           activeRecipe,
           ingredientBeingSwapped,
-          substitution
+          substitution,
+          dietProfile
         );
         const assistantMessage: ChatMessage = {
           id: buildId("msg"),
@@ -311,6 +324,7 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
       messages,
       recipeId,
       swapIngredientName,
+      dietProfile,
       updateRecipe,
     ]
   );

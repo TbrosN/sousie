@@ -14,6 +14,7 @@ import {
 } from "@/src/constants/app";
 import { LOG_MESSAGES } from "@/src/constants/logMessages";
 import { THEME } from "@/src/constants/theme";
+import { useDietProfile } from "@/src/context/DietProfileContext";
 import { useRecipes } from "@/src/context/RecipesContext";
 import { useNetworkStatus } from "@/src/hooks/useNetworkStatus";
 import { BackendClient } from "@/src/services/backendClient";
@@ -25,6 +26,7 @@ import { logError } from "@/src/utils/logger";
 export function RecipeListScreen() {
   const router = useRouter();
   const isOnline = useNetworkStatus();
+  const { dietProfile } = useDietProfile();
   const { recipes, isLoading, createRecipe, updateRecipe, deleteRecipe } = useRecipes();
   const [newRecipePrompt, setNewRecipePrompt] = useState("");
   const [createBusy, setCreateBusy] = useState(false);
@@ -54,7 +56,12 @@ export function RecipeListScreen() {
         content: trimmedPrompt,
         createdAt: new Date().toISOString(),
       };
-      const result = await BackendClient.sendChat(recipe, [userMessage], trimmedPrompt);
+      const result = await BackendClient.sendChat(
+        recipe,
+        [userMessage],
+        trimmedPrompt,
+        dietProfile
+      );
       const assistantMessage: ChatMessage = {
         id: buildId("msg"),
         role: "assistant",
@@ -128,6 +135,23 @@ export function RecipeListScreen() {
             )}
           </Pressable>
         </View>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            router.push("/diet-preferences");
+          }}
+          style={({ pressed }) => [
+            styles.preferencesButton,
+            pressed ? styles.preferencesButtonPressed : null,
+          ]}
+        >
+          <View style={styles.preferencesButtonText}>
+            <Text style={styles.preferencesButtonTitle}>{UI_COPY.dietPreferencesTitle}</Text>
+            <Text style={styles.preferencesButtonSubtitle}>{UI_COPY.dietPreferencesOpen}</Text>
+          </View>
+          <Ionicons name="nutrition-outline" size={20} color={THEME.color.accent} />
+        </Pressable>
 
         <ErrorBanner message={createError} />
         {!isOnline ? <Text style={styles.offlineNote}>{UI_COPY.offlineHint}</Text> : null}
@@ -280,6 +304,34 @@ const styles = StyleSheet.create({
     color: THEME.color.onPrimary,
     fontWeight: THEME.font.weightBold,
     fontSize: THEME.font.sizeMd,
+  },
+  preferencesButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: THEME.radius.xl,
+    borderWidth: 1,
+    borderColor: THEME.color.borderMuted,
+    backgroundColor: THEME.color.surfaceMuted,
+    paddingHorizontal: THEME.space.xl,
+    paddingVertical: THEME.space.xl,
+  },
+  preferencesButtonPressed: {
+    opacity: 0.85,
+  },
+  preferencesButtonText: {
+    flex: 1,
+    marginRight: THEME.space.md,
+  },
+  preferencesButtonTitle: {
+    color: THEME.color.textPrimary,
+    fontSize: THEME.font.sizeMd,
+    fontWeight: THEME.font.weightSemibold,
+  },
+  preferencesButtonSubtitle: {
+    color: THEME.color.textMuted,
+    fontSize: THEME.font.sizeSm,
+    marginTop: THEME.space.xs,
   },
   offlineNote: {
     color: THEME.color.offlineText,
