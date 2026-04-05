@@ -79,6 +79,21 @@ export const UI_COPY = {
   dietPreferencesDuplicateItem: "That item is already in this list.",
   dietPreferencesDuplicateItemsDetected:
     "Possible duplicates detected. Matching items are compared with lowercase text.",
+  dietPreferencesShare: "Share",
+  dietPreferencesShareSubtitle: "Text a one-tap import link to family.",
+  dietPreferencesShareEmpty:
+    "Add at least one saved preference before sharing.",
+  dietPreferencesShared: "Share link ready.",
+  dietPreferencesImportSuccess:
+    "Diet preferences imported.",
+  dietPreferencesImportUnchanged: "Those diet preferences are already saved.",
+  dietPreferencesImportError:
+    "Could not import that diet preferences link.",
+  dietPreferencesImportConfirmTitle: "Replace saved diet preferences?",
+  dietPreferencesImportConfirmMessage:
+    "This will replace the current saved preferences. Shared links only include text preferences, so local reference images will be removed.",
+  dietPreferencesImportConfirmCancel: "Cancel",
+  dietPreferencesImportConfirmReplace: "Replace",
 } as const;
 
 export function formatDeleteRecipeConfirmMessage(recipeTitle: string): string {

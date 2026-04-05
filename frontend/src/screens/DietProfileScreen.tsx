@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { useEffect, useMemo, useState } from "react";
+import { useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
+  Share,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,22 +26,42 @@ import {
   DietProfileFactory,
   DietProfileImage,
 } from "@/src/types/dietProfile";
+import {
+  buildDietProfileShareMessage,
+  canShareDietProfile,
+  getDietProfileImportQueryParam,
+  parseSharedDietProfile,
+} from "@/src/utils/dietProfileShare";
 import { buildId } from "@/src/utils/ids";
 import { logError } from "@/src/utils/logger";
+import { ConfirmDialog } from "@/src/components/ConfirmDialog";
 
 const MAX_REFERENCE_IMAGES = 3;
 
 export function DietProfileScreen() {
+  const params = useLocalSearchParams<Record<string, string | string[] | undefined>>();
   const { dietProfile, isLoading, saveDietProfile } = useDietProfile();
   const [draft, setDraft] = useState<DietProfile>(DietProfileFactory.createEmpty());
   const [isSaving, setIsSaving] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [isPickingImage, setIsPickingImage] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [lastImportedPayload, setLastImportedPayload] = useState("");
+  const [pendingImportedProfile, setPendingImportedProfile] = useState<DietProfile | null>(null);
 
   useEffect(() => {
     setDraft(dietProfile);
   }, [dietProfile]);
+
+  useEffect(() => {
+    const importParam = readImportParam(params[getDietProfileImportQueryParam()]);
+    if (!importParam || isLoading || importParam === lastImportedPayload) {
+      return;
+    }
+
+    handleIncomingImport(importParam);
+  }, [params, isLoading, lastImportedPayload, handleIncomingImport]);
 
   const remainingImageSlots = useMemo(
     () => Math.max(0, MAX_REFERENCE_IMAGES - draft.referenceImages.length),
@@ -145,6 +167,80 @@ export function DietProfileScreen() {
     }));
   }
 
+  async function handleShare(): Promise<void> {
+    if (isSharing) {
+      return;
+    }
+
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    const normalized = normalizeDietProfile(draft);
+    if (!canShareDietProfile(normalized)) {
+      setErrorMessage(UI_COPY.dietPreferencesShareEmpty);
+      return;
+    }
+
+    setIsSharing(true);
+
+    try {
+      await Share.share({
+        message: buildDietProfileShareMessage(normalized),
+      });
+      setSuccessMessage(UI_COPY.dietPreferencesShared);
+    } catch (error) {
+      logError(LOG_MESSAGES.shareDietProfileFailed, error);
+      setErrorMessage(UI_COPY.genericError);
+    } finally {
+      setIsSharing(false);
+    }
+  }
+
+  const handleIncomingImport = useCallback((importParam: string): void => {
+    setLastImportedPayload(importParam);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const importedProfile = normalizeDietProfile(parseSharedDietProfile(importParam));
+      const changed =
+        JSON.stringify(importedProfile) !== JSON.stringify(normalizeDietProfile(dietProfile));
+
+      if (!changed) {
+        setSuccessMessage(UI_COPY.dietPreferencesImportUnchanged);
+        return;
+      }
+
+      setPendingImportedProfile(importedProfile);
+    } catch (error) {
+      logError(LOG_MESSAGES.importDietProfileFailed, error);
+      setErrorMessage(UI_COPY.dietPreferencesImportError);
+    }
+  }, [dietProfile]);
+
+  async function confirmImportReplace(): Promise<void> {
+    if (!pendingImportedProfile) {
+      return;
+    }
+
+    setErrorMessage("");
+    setSuccessMessage("");
+    setIsSaving(true);
+
+    try {
+      await saveDietProfile(pendingImportedProfile);
+      await deleteDietProfileImages(dietProfile.referenceImages);
+      setDraft(pendingImportedProfile);
+      setSuccessMessage(UI_COPY.dietPreferencesImportSuccess);
+      setPendingImportedProfile(null);
+    } catch (error) {
+      logError(LOG_MESSAGES.importDietProfileFailed, error);
+      setErrorMessage(UI_COPY.dietPreferencesImportError);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <View style={styles.centered}>
@@ -159,6 +255,29 @@ export function DietProfileScreen() {
         <Text style={styles.eyebrow}>{UI_COPY.dietPreferencesTitle}</Text>
         <Text style={styles.heroTitle}>Teach Sousie how you like to eat.</Text>
         <Text style={styles.heroSubtitle}>{UI_COPY.dietPreferencesSubtitle}</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: isSharing }}
+          disabled={isSharing}
+          onPress={() => {
+            void handleShare();
+          }}
+          style={[styles.shareButton, isSharing ? styles.shareButtonDisabled : null]}
+        >
+          {isSharing ? (
+            <ActivityIndicator color={THEME.color.textPrimary} />
+          ) : (
+            <>
+              <View style={styles.shareButtonTextWrap}>
+                <Text style={styles.shareButtonTitle}>{UI_COPY.dietPreferencesShare}</Text>
+                <Text style={styles.shareButtonSubtitle}>
+                  {UI_COPY.dietPreferencesShareSubtitle}
+                </Text>
+              </View>
+              <Ionicons name="share-outline" size={20} color={THEME.color.accent} />
+            </>
+          )}
+        </Pressable>
       </GlassSurface>
 
       <ErrorBanner message={errorMessage} />
@@ -297,6 +416,19 @@ export function DietProfileScreen() {
           <Text style={styles.saveButtonText}>{UI_COPY.dietPreferencesSave}</Text>
         )}
       </Pressable>
+      <ConfirmDialog
+        visible={pendingImportedProfile != null}
+        title={UI_COPY.dietPreferencesImportConfirmTitle}
+        message={UI_COPY.dietPreferencesImportConfirmMessage}
+        cancelLabel={UI_COPY.dietPreferencesImportConfirmCancel}
+        confirmLabel={UI_COPY.dietPreferencesImportConfirmReplace}
+        onCancel={() => {
+          setPendingImportedProfile(null);
+        }}
+        onConfirm={() => {
+          void confirmImportReplace();
+        }}
+      />
     </ScrollView>
   );
 }
@@ -446,6 +578,18 @@ function normalizeDietProfile(profile: DietProfile): DietProfile {
   };
 }
 
+async function deleteDietProfileImages(images: DietProfileImage[]): Promise<void> {
+  await Promise.all(
+    images.map(async (image) => {
+      try {
+        await StorageService.deleteDietProfileImage(image.uri);
+      } catch (error) {
+        logError(LOG_MESSAGES.persistDietProfileFailed, error);
+      }
+    })
+  );
+}
+
 function dedupeAndSortStrings(values: string[]): string[] {
   const seen = new Set<string>();
   const normalized: string[] = [];
@@ -536,6 +680,36 @@ const styles = StyleSheet.create({
   heroSubtitle: {
     color: THEME.color.textSecondary,
     fontSize: THEME.font.sizeMd,
+    lineHeight: THEME.font.lineHeightBody,
+  },
+  shareButton: {
+    minHeight: THEME.space.inputMinHeight + THEME.space.md,
+    borderWidth: 1,
+    borderColor: THEME.color.borderStrong,
+    borderRadius: THEME.radius.xl,
+    backgroundColor: THEME.color.surfaceInteractive,
+    paddingHorizontal: THEME.space.xl,
+    paddingVertical: THEME.space.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: THEME.space.lg,
+  },
+  shareButtonDisabled: {
+    opacity: 0.72,
+  },
+  shareButtonTextWrap: {
+    flex: 1,
+    gap: THEME.space.xs,
+  },
+  shareButtonTitle: {
+    color: THEME.color.textPrimary,
+    fontSize: THEME.font.sizeMd,
+    fontWeight: THEME.font.weightSemibold,
+  },
+  shareButtonSubtitle: {
+    color: THEME.color.textSecondary,
+    fontSize: THEME.font.sizeSm,
     lineHeight: THEME.font.lineHeightBody,
   },
   successMessage: {
@@ -723,3 +897,10 @@ const styles = StyleSheet.create({
     fontWeight: THEME.font.weightBold,
   },
 });
+
+function readImportParam(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) {
+    return value[0] ?? "";
+  }
+  return value ?? "";
+}

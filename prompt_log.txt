@@ -714,3 +714,5 @@ I like this plan. Let's remove string_replace and make the other tool updates yo
 
 Let's add some basic duplicate detection to the user dietary prefs, and show the bubbles in sorted order so it's easier for user to spot duplicates. Of course, normalize stuff with .lower()
 
+can we add a share feature for the dietary preferences? I typed in all my dietary prefs and want to share it with my family since its the same for them. We need a simple thing I can text to a family member so they can just like import it straight into the app with 0 effort.
+

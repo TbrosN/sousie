@@ -14,4 +14,6 @@ export const LOG_MESSAGES = {
   persistRecipeDeleteFailed: "Failed to persist recipe deletion.",
   dietProfileImageReadFailed: "Failed to read diet profile image.",
   submitChatUnexpectedFailure: "Unexpected failure while submitting chat.",
+  shareDietProfileFailed: "Failed to share diet profile.",
+  importDietProfileFailed: "Failed to import diet profile from shared link.",
 } as const;
