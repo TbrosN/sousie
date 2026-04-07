@@ -1,6 +1,6 @@
 # Sousie
 
-Sousie is a mobile MVP for recipe editing with an AI assistant.
+Sousie is an AI assistant creating and cooking recipes.
 
 ## Project Layout
 
