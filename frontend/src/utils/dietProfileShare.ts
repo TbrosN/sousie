@@ -36,6 +36,7 @@ export function parseSharedDietProfile(value: string): DietProfile {
   }
 
   return {
+    isEnabled: true,
     allergiesAndHardAvoids: ensureStringArray(parsed.allergiesAndHardAvoids),
     mostlyAvoid: ensureStringArray(parsed.mostlyAvoid),
     preferredIngredients: ensureStringArray(parsed.preferredIngredients),

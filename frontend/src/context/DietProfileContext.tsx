@@ -15,7 +15,10 @@ import { logError } from "@/src/utils/logger";
 
 type DietProfileContextValue = {
   dietProfile: DietProfile;
+  isDietProfileEnabled: boolean;
+  dietProfileForAi: DietProfile | undefined;
   isLoading: boolean;
+  setDietProfileEnabled: (enabled: boolean) => Promise<void>;
   saveDietProfile: (profile: DietProfile) => Promise<void>;
 };
 
@@ -23,6 +26,7 @@ const DietProfileContext = createContext<DietProfileContextValue | null>(null);
 
 export function DietProfileProvider({ children }: PropsWithChildren) {
   const [dietProfile, setDietProfile] = useState<DietProfile>(DietProfileFactory.createEmpty());
+  const [isDietProfileEnabled, setIsDietProfileEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -33,31 +37,76 @@ export function DietProfileProvider({ children }: PropsWithChildren) {
     try {
       const stored = await StorageService.readDietProfile();
       setDietProfile(stored);
+      setIsDietProfileEnabled(stored.isEnabled !== false);
     } catch (error) {
       logError(LOG_MESSAGES.loadDietProfileFailed, error);
       setDietProfile(DietProfileFactory.createEmpty());
+      setIsDietProfileEnabled(true);
     } finally {
       setIsLoading(false);
     }
   }
 
   const saveDietProfile = useCallback(async (profile: DietProfile): Promise<void> => {
-    setDietProfile(profile);
+    const nextProfile = {
+      ...profile,
+      isEnabled: isDietProfileEnabled,
+    };
+    setDietProfile(nextProfile);
     try {
-      await StorageService.writeDietProfile(profile);
+      await StorageService.writeDietProfile(nextProfile);
     } catch (error) {
       logError(LOG_MESSAGES.persistDietProfileFailed, error);
       throw error;
     }
-  }, []);
+  }, [isDietProfileEnabled]);
+
+  const setDietProfileEnabled = useCallback(
+    async (enabled: boolean): Promise<void> => {
+      const previousEnabled = isDietProfileEnabled;
+      setIsDietProfileEnabled(enabled);
+      try {
+        await StorageService.writeDietProfile({
+          ...dietProfile,
+          isEnabled: enabled,
+        });
+      } catch (error) {
+        setIsDietProfileEnabled(previousEnabled);
+        logError(LOG_MESSAGES.persistDietProfileFailed, error);
+        throw error;
+      }
+    },
+    [dietProfile, isDietProfileEnabled]
+  );
+
+  const dietProfileForAi = useMemo<DietProfile | undefined>(
+    () =>
+      isDietProfileEnabled
+        ? {
+            ...dietProfile,
+            isEnabled: true,
+          }
+        : undefined,
+    [dietProfile, isDietProfileEnabled]
+  );
 
   const value = useMemo<DietProfileContextValue>(
     () => ({
       dietProfile,
+      isDietProfileEnabled,
+      dietProfileForAi,
       isLoading,
+      setDietProfileEnabled,
       saveDietProfile,
     }),
-    [dietProfile, isLoading, saveDietProfile]
+    [
+      dietProfile,
+      dietProfileForAi,
+      isDietProfileEnabled,
+      isLoading,
+      saveDietProfile,
+      setDietProfileEnabled,
+    ]
   );
 
   return <DietProfileContext.Provider value={value}>{children}</DietProfileContext.Provider>;

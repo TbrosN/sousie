@@ -9,6 +9,7 @@ export type DietProfileImage = {
 };
 
 export type DietProfile = {
+  isEnabled: boolean;
   allergiesAndHardAvoids: string[];
   mostlyAvoid: string[];
   preferredIngredients: string[];
@@ -19,6 +20,7 @@ export type DietProfile = {
 export class DietProfileFactory {
   static createEmpty(): DietProfile {
     return {
+      isEnabled: true,
       allergiesAndHardAvoids: [],
       mostlyAvoid: [],
       preferredIngredients: [],

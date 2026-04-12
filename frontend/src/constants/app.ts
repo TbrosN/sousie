@@ -53,7 +53,11 @@ export const UI_COPY = {
   chefModeNoIngredients: "No ingredients",
   dietPreferencesTitle: "Diet Preferences",
   dietPreferencesSubtitle:
-    "Sousie uses these saved preferences and reference images for every AI recipe action.",
+    "Save preferences and reference images for AI recipe actions, then turn them off anytime without deleting them.",
+  dietPreferencesToggleLabel: "Use diet preferences",
+  dietPreferencesToggleEnabled: "Enabled for AI recipe actions.",
+  dietPreferencesToggleDisabled:
+    "Disabled. Sousie will ignore these saved preferences until you turn them back on.",
   dietPreferencesSave: "Save Preferences",
   dietPreferencesSaved: "Preferences saved.",
   dietPreferencesAddImage: "Add Reference Images",
@@ -75,6 +79,8 @@ export const UI_COPY = {
   dietPreferencesImagesHint:
     "Attach charts, screenshots, or diagrams that explain how you like to eat.",
   dietPreferencesOpen: "Edit diet preferences",
+  dietPreferencesOpenEnabled: "Currently used for AI recipes",
+  dietPreferencesOpenDisabled: "Currently ignored for AI recipes",
   dietPreferencesAddItem: "Add",
   dietPreferencesDuplicateItem: "That item is already in this list.",
   dietPreferencesDuplicateItemsDetected:

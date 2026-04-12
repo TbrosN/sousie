@@ -26,7 +26,7 @@ import { logError } from "@/src/utils/logger";
 export function RecipeListScreen() {
   const router = useRouter();
   const isOnline = useNetworkStatus();
-  const { dietProfile } = useDietProfile();
+  const { dietProfileForAi, isDietProfileEnabled } = useDietProfile();
   const { recipes, isLoading, createRecipe, updateRecipe, deleteRecipe } = useRecipes();
   const [newRecipePrompt, setNewRecipePrompt] = useState("");
   const [createBusy, setCreateBusy] = useState(false);
@@ -60,7 +60,7 @@ export function RecipeListScreen() {
         recipe,
         [userMessage],
         trimmedPrompt,
-        dietProfile
+        dietProfileForAi
       );
       const assistantMessage: ChatMessage = {
         id: buildId("msg"),
@@ -148,7 +148,11 @@ export function RecipeListScreen() {
         >
           <View style={styles.preferencesButtonText}>
             <Text style={styles.preferencesButtonTitle}>{UI_COPY.dietPreferencesTitle}</Text>
-            <Text style={styles.preferencesButtonSubtitle}>{UI_COPY.dietPreferencesOpen}</Text>
+            <Text style={styles.preferencesButtonSubtitle}>
+              {isDietProfileEnabled
+                ? UI_COPY.dietPreferencesOpenEnabled
+                : UI_COPY.dietPreferencesOpenDisabled}
+            </Text>
           </View>
           <Ionicons name="nutrition-outline" size={20} color={THEME.color.accent} />
         </Pressable>

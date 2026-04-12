@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -39,8 +39,9 @@ import { ConfirmDialog } from "@/src/components/ConfirmDialog";
 const MAX_REFERENCE_IMAGES = 3;
 
 export function DietProfileScreen() {
-  const params = useLocalSearchParams<Record<string, string | string[] | undefined>>();
-  const { dietProfile, isLoading, saveDietProfile } = useDietProfile();
+  const params = useLocalSearchParams();
+  const { dietProfile, isDietProfileEnabled, isLoading, saveDietProfile, setDietProfileEnabled } =
+    useDietProfile();
   const [draft, setDraft] = useState<DietProfile>(DietProfileFactory.createEmpty());
   const [isSaving, setIsSaving] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -49,24 +50,49 @@ export function DietProfileScreen() {
   const [successMessage, setSuccessMessage] = useState("");
   const [lastImportedPayload, setLastImportedPayload] = useState("");
   const [pendingImportedProfile, setPendingImportedProfile] = useState<DietProfile | null>(null);
+  const lastSyncedProfileRef = useRef("");
 
   useEffect(() => {
-    setDraft(dietProfile);
-  }, [dietProfile]);
-
-  useEffect(() => {
-    const importParam = readImportParam(params[getDietProfileImportQueryParam()]);
-    if (!importParam || isLoading || importParam === lastImportedPayload) {
+    const nextSyncKey = JSON.stringify({
+      ...dietProfile,
+      isEnabled: true,
+    });
+    if (nextSyncKey === lastSyncedProfileRef.current) {
       return;
     }
-
-    handleIncomingImport(importParam);
-  }, [params, isLoading, lastImportedPayload, handleIncomingImport]);
+    lastSyncedProfileRef.current = nextSyncKey;
+    setDraft({
+      ...dietProfile,
+      isEnabled: isDietProfileEnabled,
+    });
+  }, [dietProfile, isDietProfileEnabled]);
 
   const remainingImageSlots = useMemo(
     () => Math.max(0, MAX_REFERENCE_IMAGES - draft.referenceImages.length),
     [draft.referenceImages.length]
   );
+  const formDisabled = !isDietProfileEnabled;
+
+  async function handleToggleDietProfileEnabled(): Promise<void> {
+    const nextEnabled = !isDietProfileEnabled;
+    setErrorMessage("");
+    setSuccessMessage("");
+    setDraft((current) => ({
+      ...current,
+      isEnabled: nextEnabled,
+    }));
+
+    try {
+      await setDietProfileEnabled(nextEnabled);
+    } catch (error) {
+      logError(LOG_MESSAGES.persistDietProfileFailed, error);
+      setDraft((current) => ({
+        ...current,
+        isEnabled: !nextEnabled,
+      }));
+      setErrorMessage(UI_COPY.genericError);
+    }
+  }
 
   async function handleSave(): Promise<void> {
     setErrorMessage("");
@@ -202,9 +228,15 @@ export function DietProfileScreen() {
     setSuccessMessage("");
 
     try {
-      const importedProfile = normalizeDietProfile(parseSharedDietProfile(importParam));
-      const changed =
-        JSON.stringify(importedProfile) !== JSON.stringify(normalizeDietProfile(dietProfile));
+      const importedProfile = normalizeDietProfile({
+        ...parseSharedDietProfile(importParam),
+        isEnabled: isDietProfileEnabled,
+      });
+      const currentProfile = normalizeDietProfile({
+        ...dietProfile,
+        isEnabled: isDietProfileEnabled,
+      });
+      const changed = JSON.stringify(importedProfile) !== JSON.stringify(currentProfile);
 
       if (!changed) {
         setSuccessMessage(UI_COPY.dietPreferencesImportUnchanged);
@@ -216,7 +248,16 @@ export function DietProfileScreen() {
       logError(LOG_MESSAGES.importDietProfileFailed, error);
       setErrorMessage(UI_COPY.dietPreferencesImportError);
     }
-  }, [dietProfile]);
+  }, [dietProfile, isDietProfileEnabled]);
+
+  useEffect(() => {
+    const importParam = readImportParam(params[getDietProfileImportQueryParam()]);
+    if (!importParam || isLoading || importParam === lastImportedPayload) {
+      return;
+    }
+
+    handleIncomingImport(importParam);
+  }, [handleIncomingImport, isLoading, lastImportedPayload, params]);
 
   async function confirmImportReplace(): Promise<void> {
     if (!pendingImportedProfile) {
@@ -255,6 +296,46 @@ export function DietProfileScreen() {
         <Text style={styles.eyebrow}>{UI_COPY.dietPreferencesTitle}</Text>
         <Text style={styles.heroTitle}>Teach Sousie how you like to eat.</Text>
         <Text style={styles.heroSubtitle}>{UI_COPY.dietPreferencesSubtitle}</Text>
+        <View style={styles.toggleCard}>
+          <View style={styles.toggleTextWrap}>
+            <Text style={styles.toggleLabel}>{UI_COPY.dietPreferencesToggleLabel}</Text>
+            <Text style={styles.toggleHint}>
+              {isDietProfileEnabled
+                ? UI_COPY.dietPreferencesToggleEnabled
+                : UI_COPY.dietPreferencesToggleDisabled}
+            </Text>
+          </View>
+          <Pressable
+            accessibilityLabel={UI_COPY.dietPreferencesToggleLabel}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: isDietProfileEnabled }}
+            hitSlop={THEME.space.hitSlop}
+            onPress={() => {
+              void handleToggleDietProfileEnabled();
+            }}
+            style={({ pressed }) => [styles.toggleControl, pressed ? styles.toggleControlPressed : null]}
+          >
+            <View
+              style={[
+                styles.toggleTrack,
+                isDietProfileEnabled ? styles.toggleTrackEnabled : styles.toggleTrackDisabled,
+              ]}
+            >
+              <View
+                style={[
+                  styles.toggleThumb,
+                  isDietProfileEnabled ? styles.toggleThumbEnabled : styles.toggleThumbDisabled,
+                ]}
+              >
+                <Ionicons
+                  name={isDietProfileEnabled ? "checkmark" : "close"}
+                  size={14}
+                  color={isDietProfileEnabled ? THEME.color.onPrimary : THEME.color.textMuted}
+                />
+              </View>
+            </View>
+          </Pressable>
+        </View>
         <Pressable
           accessibilityRole="button"
           accessibilityState={{ disabled: isSharing }}
@@ -284,6 +365,7 @@ export function DietProfileScreen() {
       {successMessage ? <Text style={styles.successMessage}>{successMessage}</Text> : null}
 
       <BubbleFieldCard
+        disabled={formDisabled}
         label={UI_COPY.dietPreferencesSectionHardAvoids}
         hint={UI_COPY.dietPreferencesBubbleHint}
         items={draft.allergiesAndHardAvoids}
@@ -297,6 +379,7 @@ export function DietProfileScreen() {
       />
 
       <BubbleFieldCard
+        disabled={formDisabled}
         label={UI_COPY.dietPreferencesSectionMostlyAvoid}
         hint={UI_COPY.dietPreferencesBubbleHint}
         items={draft.mostlyAvoid}
@@ -305,6 +388,7 @@ export function DietProfileScreen() {
       />
 
       <BubbleFieldCard
+        disabled={formDisabled}
         label={UI_COPY.dietPreferencesSectionPreferred}
         hint={UI_COPY.dietPreferencesBubbleHint}
         items={draft.preferredIngredients}
@@ -318,6 +402,7 @@ export function DietProfileScreen() {
       />
 
       <PreferenceFieldCard
+        disabled={formDisabled}
         label={UI_COPY.dietPreferencesSectionNotes}
         hint={UI_COPY.dietPreferencesNotesHint}
         value={draft.freeformNotes}
@@ -328,7 +413,7 @@ export function DietProfileScreen() {
         multiline
       />
 
-      <GlassSurface contentStyle={styles.imagesCard}>
+      <GlassSurface contentStyle={[styles.imagesCard, formDisabled ? styles.disabledCard : null]}>
         <View style={styles.sectionHeading}>
           <View style={styles.sectionTitleWrap}>
             <Text style={styles.sectionTitle}>{UI_COPY.dietPreferencesSectionImages}</Text>
@@ -337,15 +422,17 @@ export function DietProfileScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityState={{
-              disabled: remainingImageSlots === 0 || isPickingImage,
+              disabled: formDisabled || remainingImageSlots === 0 || isPickingImage,
             }}
-            disabled={remainingImageSlots === 0 || isPickingImage}
+            disabled={formDisabled || remainingImageSlots === 0 || isPickingImage}
             onPress={() => {
               void handleAddImages();
             }}
             style={[
               styles.secondaryButton,
-              remainingImageSlots === 0 || isPickingImage ? styles.secondaryButtonDisabled : null,
+              formDisabled || remainingImageSlots === 0 || isPickingImage
+                ? styles.secondaryButtonDisabled
+                : null,
             ]}
           >
             {isPickingImage ? (
@@ -383,10 +470,12 @@ export function DietProfileScreen() {
                   <Pressable
                     accessibilityLabel={UI_COPY.dietPreferencesRemoveImage}
                     accessibilityRole="button"
+                    accessibilityState={{ disabled: formDisabled }}
+                    disabled={formDisabled}
                     onPress={() => {
                       handleRemoveImage(image);
                     }}
-                    style={styles.imageRemoveButton}
+                    style={[styles.imageRemoveButton, formDisabled ? styles.iconButtonDisabled : null]}
                   >
                     <Ionicons
                       name="trash-outline"
@@ -434,6 +523,7 @@ export function DietProfileScreen() {
 }
 
 type PreferenceFieldCardProps = {
+  disabled: boolean;
   label: string;
   hint: string;
   value: string;
@@ -443,6 +533,7 @@ type PreferenceFieldCardProps = {
 };
 
 function PreferenceFieldCard({
+  disabled,
   label,
   hint,
   value,
@@ -451,15 +542,20 @@ function PreferenceFieldCard({
   multiline = false,
 }: PreferenceFieldCardProps) {
   return (
-    <GlassSurface contentStyle={styles.fieldCard}>
+    <GlassSurface contentStyle={[styles.fieldCard, disabled ? styles.disabledCard : null]}>
       <Text style={styles.sectionTitle}>{label}</Text>
       <Text style={styles.sectionHint}>{hint}</Text>
       <TextInput
+        editable={!disabled}
         multiline
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={THEME.color.textMuted}
-        style={[styles.textArea, multiline ? styles.notesArea : null]}
+        style={[
+          styles.textArea,
+          multiline ? styles.notesArea : null,
+          disabled ? styles.inputDisabled : null,
+        ]}
         textAlignVertical="top"
         value={value}
       />
@@ -468,6 +564,7 @@ function PreferenceFieldCard({
 }
 
 type BubbleFieldCardProps = {
+  disabled: boolean;
   label: string;
   hint: string;
   items: string[];
@@ -476,6 +573,7 @@ type BubbleFieldCardProps = {
 };
 
 function BubbleFieldCard({
+  disabled,
   label,
   hint,
   items,
@@ -501,6 +599,9 @@ function BubbleFieldCard({
   }, [items]);
 
   function addItem(): void {
+    if (disabled) {
+      return;
+    }
     const cleaned = draftValue.trim();
     if (!cleaned) {
       return;
@@ -516,25 +617,35 @@ function BubbleFieldCard({
   }
 
   function removeItem(target: string): void {
+    if (disabled) {
+      return;
+    }
     onChangeItems(items.filter((item) => item !== target));
     setDuplicateMessage("");
   }
 
   return (
-    <GlassSurface contentStyle={styles.fieldCard}>
+    <GlassSurface contentStyle={[styles.fieldCard, disabled ? styles.disabledCard : null]}>
       <Text style={styles.sectionTitle}>{label}</Text>
       <Text style={styles.sectionHint}>{hint}</Text>
       <View style={styles.bubbleComposer}>
         <TextInput
+          editable={!disabled}
           onChangeText={setDraftValue}
           onSubmitEditing={addItem}
           placeholder={placeholder}
           placeholderTextColor={THEME.color.textMuted}
-          style={styles.bubbleInput}
+          style={[styles.bubbleInput, disabled ? styles.inputDisabled : null]}
           value={draftValue}
           returnKeyType="done"
         />
-        <Pressable accessibilityRole="button" onPress={addItem} style={styles.addBubbleButton}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled }}
+          disabled={disabled}
+          onPress={addItem}
+          style={[styles.addBubbleButton, disabled ? styles.secondaryButtonDisabled : null]}
+        >
           <Text style={styles.addBubbleButtonText}>{UI_COPY.dietPreferencesAddItem}</Text>
         </Pressable>
       </View>
@@ -553,11 +664,13 @@ function BubbleFieldCard({
             <Pressable
               accessibilityLabel={`Remove ${item}`}
               accessibilityRole="button"
+              accessibilityState={{ disabled }}
+              disabled={disabled}
               hitSlop={THEME.space.hitSlop}
               onPress={() => {
                 removeItem(item);
               }}
-              style={styles.bubbleRemoveButton}
+              style={[styles.bubbleRemoveButton, disabled ? styles.iconButtonDisabled : null]}
             >
               <Ionicons name="close" size={14} color={THEME.color.textPrimary} />
             </Pressable>
@@ -570,6 +683,7 @@ function BubbleFieldCard({
 
 function normalizeDietProfile(profile: DietProfile): DietProfile {
   return {
+    isEnabled: profile.isEnabled !== false,
     allergiesAndHardAvoids: dedupeAndSortStrings(profile.allergiesAndHardAvoids),
     mostlyAvoid: dedupeAndSortStrings(profile.mostlyAvoid),
     preferredIngredients: dedupeAndSortStrings(profile.preferredIngredients),
@@ -682,6 +796,75 @@ const styles = StyleSheet.create({
     fontSize: THEME.font.sizeMd,
     lineHeight: THEME.font.lineHeightBody,
   },
+  toggleCard: {
+    minHeight: THEME.space.inputMinHeight + THEME.space.xl,
+    borderWidth: 1,
+    borderColor: THEME.color.borderMuted,
+    borderRadius: THEME.radius.xl,
+    backgroundColor: THEME.color.surfaceMuted,
+    paddingHorizontal: THEME.space.xl,
+    paddingVertical: THEME.space.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: THEME.space.lg,
+  },
+  toggleTextWrap: {
+    flex: 1,
+    gap: THEME.space.xs,
+  },
+  toggleLabel: {
+    color: THEME.color.textPrimary,
+    fontSize: THEME.font.sizeMd,
+    fontWeight: THEME.font.weightSemibold,
+  },
+  toggleHint: {
+    color: THEME.color.textSecondary,
+    fontSize: THEME.font.sizeSm,
+    lineHeight: THEME.font.lineHeightBody,
+  },
+  toggleControl: {
+    paddingVertical: THEME.space.xs,
+    paddingLeft: THEME.space.lg,
+  },
+  toggleControlPressed: {
+    opacity: 0.85,
+  },
+  toggleTrack: {
+    width: 58,
+    height: 34,
+    borderRadius: THEME.radius.pill,
+    borderWidth: 1,
+    paddingHorizontal: THEME.space.xs,
+    alignItems: "center",
+    flexDirection: "row",
+  },
+  toggleTrackEnabled: {
+    justifyContent: "flex-end",
+    backgroundColor: THEME.color.accentSoft,
+    borderColor: THEME.color.borderStrong,
+  },
+  toggleTrackDisabled: {
+    justifyContent: "flex-start",
+    backgroundColor: THEME.color.surfaceInteractive,
+    borderColor: THEME.color.borderMuted,
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: THEME.radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+  },
+  toggleThumbEnabled: {
+    backgroundColor: THEME.color.accentStrong,
+    borderColor: THEME.color.primaryAction,
+  },
+  toggleThumbDisabled: {
+    backgroundColor: THEME.color.surfaceStrong,
+    borderColor: THEME.color.borderDefault,
+  },
   shareButton: {
     minHeight: THEME.space.inputMinHeight + THEME.space.md,
     borderWidth: 1,
@@ -720,6 +903,9 @@ const styles = StyleSheet.create({
     gap: THEME.space.md,
     padding: THEME.space.xxxl,
   },
+  disabledCard: {
+    opacity: 0.58,
+  },
   imagesCard: {
     gap: THEME.space.md,
     padding: THEME.space.xxxl,
@@ -755,6 +941,10 @@ const styles = StyleSheet.create({
     color: THEME.color.textPrimary,
     fontSize: THEME.font.sizeBody,
     lineHeight: THEME.font.lineHeightBody,
+  },
+  inputDisabled: {
+    color: THEME.color.textMuted,
+    borderColor: THEME.color.borderDefault,
   },
   notesArea: {
     minHeight: 132,
@@ -820,6 +1010,9 @@ const styles = StyleSheet.create({
   bubbleRemoveButton: {
     alignItems: "center",
     justifyContent: "center",
+  },
+  iconButtonDisabled: {
+    opacity: 0.5,
   },
   secondaryButton: {
     flexDirection: "row",

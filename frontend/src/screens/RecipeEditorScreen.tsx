@@ -25,7 +25,7 @@ type RecipeEditorScreenProps = {
 
 export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
   const { getRecipeById, updateRecipe } = useRecipes();
-  const { dietProfile } = useDietProfile();
+  const { dietProfileForAi } = useDietProfile();
   const isOnline = useNetworkStatus();
 
   const recipe = useMemo(() => getRecipeById(recipeId), [getRecipeById, recipeId]);
@@ -96,7 +96,7 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
           activeRecipe,
           nextMessages,
           trimmed,
-          dietProfile
+          dietProfileForAi
         );
         const assistantMessage: ChatMessage = {
           id: buildId("msg"),
@@ -122,7 +122,7 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
         setIsSending(false);
       }
     },
-    [activeRecipe, dietProfile, isOnline, messages, recipeId, updateRecipe]
+    [activeRecipe, dietProfileForAi, isOnline, messages, recipeId, updateRecipe]
   );
 
   function handleSubmit(): void {
@@ -163,7 +163,7 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
         const substitutions = await BackendClient.suggestIngredientSubstitutions(
           activeRecipe,
           ingredientName,
-          dietProfile
+          dietProfileForAi
         );
         setSubstitutionOptions(substitutions);
       } catch (error) {
@@ -174,7 +174,7 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
         setIsLoadingSubstitutions(false);
       }
     },
-    [activeRecipe, closeSwapModal, dietProfile, isOnline, isSending]
+    [activeRecipe, closeSwapModal, dietProfileForAi, isOnline, isSending]
   );
 
   const openChefMode = useCallback(() => {
@@ -214,7 +214,7 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
         const result = await BackendClient.removeIngredient(
           activeRecipe,
           ingredientName,
-          dietProfile
+          dietProfileForAi
         );
         const assistantMessage: ChatMessage = {
           id: buildId("msg"),
@@ -236,7 +236,7 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
         setIsSending(false);
       }
     },
-    [activeRecipe, dietProfile, isOnline, messages, recipeId, updateRecipe]
+    [activeRecipe, dietProfileForAi, isOnline, messages, recipeId, updateRecipe]
   );
 
   const handleIngredientRemovePress = useCallback(
@@ -295,7 +295,7 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
           activeRecipe,
           ingredientBeingSwapped,
           substitution,
-          dietProfile
+          dietProfileForAi
         );
         const assistantMessage: ChatMessage = {
           id: buildId("msg"),
@@ -324,7 +324,7 @@ export function RecipeEditorScreen({ recipeId }: RecipeEditorScreenProps) {
       messages,
       recipeId,
       swapIngredientName,
-      dietProfile,
+      dietProfileForAi,
       updateRecipe,
     ]
   );
