@@ -62,6 +62,14 @@ type BackendDietProfile = {
   reference_images: BackendDietProfileImage[];
 };
 
+type BackendJsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | BackendJsonValue[]
+  | { [key: string]: BackendJsonValue };
+
 export class BackendClient {
   static async sendChat(
     recipe: Recipe,
@@ -74,28 +82,17 @@ export class BackendClient {
       content: message.content,
     }));
 
-    const response = await fetch(
+    const payload = await postJson<BackendChatResponse>(
       `${BACKEND_CONFIG.baseUrl}${BACKEND_CONFIG.chatPath}`,
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          recipe_id: recipe.id,
-          recipe: toBackendRecipe(recipe),
-          messages: recentMessages,
-          user_message: userMessage,
-          diet_profile: await toBackendDietProfile(dietProfile),
-        }),
-      }
+        recipe_id: recipe.id,
+        recipe: toBackendRecipe(recipe),
+        messages: recentMessages,
+        user_message: userMessage,
+        diet_profile: await toBackendDietProfile(dietProfile),
+      },
+      "chat request"
     );
-
-    if (!response.ok) {
-      throw new Error("Backend request failed");
-    }
-
-    const payload = (await response.json()) as BackendChatResponse;
     return {
       assistantMessage: payload.assistant_message,
       recipe: fromBackendRecipe(payload.recipe, recipe.updatedAt),
@@ -107,26 +104,15 @@ export class BackendClient {
     ingredientName: string,
     dietProfile?: DietProfile
   ): Promise<string[]> {
-    const response = await fetch(
+    const payload = await postJson<BackendIngredientSubstitutionsResponse>(
       `${BACKEND_CONFIG.baseUrl}${BACKEND_CONFIG.ingredientSubstitutionsPath}`,
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          recipe: toBackendRecipe(recipe),
-          ingredient_name: ingredientName,
-          diet_profile: await toBackendDietProfile(dietProfile),
-        }),
-      }
+        recipe: toBackendRecipe(recipe),
+        ingredient_name: ingredientName,
+        diet_profile: await toBackendDietProfile(dietProfile),
+      },
+      "ingredient substitutions request"
     );
-
-    if (!response.ok) {
-      throw new Error("Backend substitutions request failed");
-    }
-
-    const payload = (await response.json()) as BackendIngredientSubstitutionsResponse;
     return payload.substitutions;
   }
 
@@ -135,26 +121,15 @@ export class BackendClient {
     ingredientName: string,
     dietProfile?: DietProfile
   ): Promise<{ assistantMessage: string; recipe: Recipe }> {
-    const response = await fetch(
+    const payload = await postJson<BackendIngredientEditResponse>(
       `${BACKEND_CONFIG.baseUrl}${BACKEND_CONFIG.ingredientRemovePath}`,
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          recipe: toBackendRecipe(recipe),
-          ingredient_name: ingredientName,
-          diet_profile: await toBackendDietProfile(dietProfile),
-        }),
-      }
+        recipe: toBackendRecipe(recipe),
+        ingredient_name: ingredientName,
+        diet_profile: await toBackendDietProfile(dietProfile),
+      },
+      "ingredient removal request"
     );
-
-    if (!response.ok) {
-      throw new Error("Backend ingredient removal request failed");
-    }
-
-    const payload = (await response.json()) as BackendIngredientEditResponse;
     return {
       assistantMessage: payload.assistant_message,
       recipe: fromBackendRecipe(payload.recipe, recipe.updatedAt),
@@ -167,31 +142,59 @@ export class BackendClient {
     newIngredientName: string,
     dietProfile?: DietProfile
   ): Promise<{ assistantMessage: string; recipe: Recipe }> {
-    const response = await fetch(
+    const payload = await postJson<BackendIngredientEditResponse>(
       `${BACKEND_CONFIG.baseUrl}${BACKEND_CONFIG.ingredientSubstitutePath}`,
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          recipe: toBackendRecipe(recipe),
-          old_ingredient_name: oldIngredientName,
-          new_ingredient_name: newIngredientName,
-          diet_profile: await toBackendDietProfile(dietProfile),
-        }),
-      }
+        recipe: toBackendRecipe(recipe),
+        old_ingredient_name: oldIngredientName,
+        new_ingredient_name: newIngredientName,
+        diet_profile: await toBackendDietProfile(dietProfile),
+      },
+      "ingredient substitution request"
     );
-
-    if (!response.ok) {
-      throw new Error("Backend ingredient substitution request failed");
-    }
-
-    const payload = (await response.json()) as BackendIngredientEditResponse;
     return {
       assistantMessage: payload.assistant_message,
       recipe: fromBackendRecipe(payload.recipe, recipe.updatedAt),
     };
+  }
+}
+
+async function postJson<TResponse>(
+  url: string,
+  body: BackendJsonValue,
+  requestLabel: string
+): Promise<TResponse> {
+  let response: Response;
+
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    throw new Error(
+      `Backend ${requestLabel} could not reach ${url}. ${formatUnknownError(error)}`,
+      { cause: error }
+    );
+  }
+
+  if (!response.ok) {
+    const responseDetails = await readErrorResponseDetails(response);
+    throw new Error(
+      `Backend ${requestLabel} failed with ${response.status} ${response.statusText} at ${url}${responseDetails}`
+    );
+  }
+
+  try {
+    return (await response.json()) as TResponse;
+  } catch (error) {
+    throw new Error(
+      `Backend ${requestLabel} returned invalid JSON from ${url}. ${formatUnknownError(error)}`,
+      { cause: error }
+    );
   }
 }
 
@@ -291,4 +294,48 @@ function isBackendDietProfileImage(
   image: BackendDietProfileImage | null
 ): image is BackendDietProfileImage {
   return image !== null;
+}
+
+async function readErrorResponseDetails(response: Response): Promise<string> {
+  try {
+    const rawText = await response.text();
+    const trimmed = rawText.trim();
+    if (!trimmed) {
+      return "";
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed) as BackendJsonValue;
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        !Array.isArray(parsed) &&
+        "detail" in parsed &&
+        typeof parsed.detail === "string" &&
+        parsed.detail.trim().length > 0
+      ) {
+        return ` - ${parsed.detail.trim()}`;
+      }
+    } catch {
+      // Ignore JSON parse failures and fall back to raw text.
+    }
+
+    return ` - ${trimmed.slice(0, 200)}`;
+  } catch (error) {
+    return ` - failed to read error response body: ${formatUnknownError(error)}`;
+  }
+}
+
+function formatUnknownError(error: unknown): string {
+  if (error instanceof Error) {
+    return `${error.name}: ${error.message}`;
+  }
+  if (typeof error === "string") {
+    return error;
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
 }
